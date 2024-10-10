@@ -1,0 +1,1 @@
+Multiple times a human makes two jumps to the left and then two jumps to the right.

@@ -1,0 +1,1 @@
+Someone opens something, puts an object inside, then closes it again

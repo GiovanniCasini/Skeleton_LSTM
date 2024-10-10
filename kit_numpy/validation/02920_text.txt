@@ -1,0 +1,1 @@
+A person is jumping in a circle by turning 90 degrees to the left with every jump.

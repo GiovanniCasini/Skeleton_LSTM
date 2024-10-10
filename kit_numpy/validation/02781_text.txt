@@ -1,0 +1,1 @@
+A person is walking forward, turns around, walks back and then walks forward in a S-shape.

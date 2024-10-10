@@ -1,0 +1,1 @@
+A person walks forwards, during that the person is pushed backward, so he makes a few small steps backwards until gaining his balance again and walks on.

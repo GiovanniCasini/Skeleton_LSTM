@@ -1,0 +1,1 @@
+A human walks 2 steps forward on one line, makes a turn on the left foot and ends up where it started.

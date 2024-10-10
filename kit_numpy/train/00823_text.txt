@@ -1,0 +1,1 @@
+Someone walks and then turns around by 180° to the left and walks back.

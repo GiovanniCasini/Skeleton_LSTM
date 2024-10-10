@@ -1,0 +1,1 @@
+A person jumps to the left and walks back to his original position.

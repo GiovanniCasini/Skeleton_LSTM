@@ -1,0 +1,1 @@
+A person takes a lunge to the left and returns to the initial position.

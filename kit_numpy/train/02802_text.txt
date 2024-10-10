@@ -1,0 +1,1 @@
+A persons performs two small steps, then one greater step, then again three small steps and finally turns around to return the same way to his original position

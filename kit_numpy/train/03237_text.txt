@@ -1,0 +1,1 @@
+A person goes one diagonal step forward to the right front using his right food first.

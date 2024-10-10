@@ -1,0 +1,1 @@
+A person takes a step backwards after being pushed.

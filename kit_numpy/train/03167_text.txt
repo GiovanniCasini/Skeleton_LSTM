@@ -1,0 +1,1 @@
+A human imitates a chicken and performs a picking movement.

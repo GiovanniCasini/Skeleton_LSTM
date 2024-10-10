@@ -1,0 +1,1 @@
+A person walks 2 steps, performs a spot turn on the right foot and walks back to the starting position.

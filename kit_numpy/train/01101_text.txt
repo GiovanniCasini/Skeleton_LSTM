@@ -1,0 +1,1 @@
+A person get pushed from the left and recovers with by stepping two steps to the right.

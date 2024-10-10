@@ -1,0 +1,1 @@
+A person leisurely walks three paces, pauses, walks three more paces, pauses, walks two paces, turns around and walks 8 paces back and then turns so they're facing the original orientation again.

@@ -1,0 +1,1 @@
+A person walks over two obstacles with two steps, turns around and goes back, then walks over the obstacles again with one step and goes back again.

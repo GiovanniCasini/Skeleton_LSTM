@@ -1,0 +1,1 @@
+A Person is walking a quarter circle in clockwise direction.

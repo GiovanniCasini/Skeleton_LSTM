@@ -1,0 +1,1 @@
+A person takes two foward steps, turns around 180 degrees and returns to the initial standing position.

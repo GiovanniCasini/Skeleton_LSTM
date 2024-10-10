@@ -1,0 +1,1 @@
+A person walks in the forward direction then turns around by 180 degrees and walks forward again.

@@ -1,0 +1,1 @@
+A person is performing multiple jumps on the spot by first turning 90 degrees, then 180 degrees and finally 360 degrees to the left.

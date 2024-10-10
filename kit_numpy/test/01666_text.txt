@@ -1,0 +1,1 @@
+A person walks two steps forwards, rotates to their left 180 degrees into the opposite direction and continues walking for two steps then stops.

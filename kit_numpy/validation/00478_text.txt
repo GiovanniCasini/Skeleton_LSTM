@@ -1,0 +1,1 @@
+A person walks two steps, turns around the the left, walks back and ends his movement by looking to the left.

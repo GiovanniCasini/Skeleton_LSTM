@@ -1,0 +1,1 @@
+Someone evades an obstacle by jumping to the right side while walking forward and takes a small step to the left after that.

@@ -1,0 +1,1 @@
+A person walks forwards. Then avaoids an obstacle.

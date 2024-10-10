@@ -1,0 +1,1 @@
+A person takes two steps forwards, turn around 180° and goes back to the start position.

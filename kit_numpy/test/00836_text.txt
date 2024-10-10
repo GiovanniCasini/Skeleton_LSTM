@@ -1,0 +1,1 @@
+A person walks forward turns around by its left side then walks forward again.

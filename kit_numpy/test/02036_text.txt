@@ -1,0 +1,1 @@
+A person walks two steps, turns on the left foot 180 degree counterclockwise, and walks back two steps.

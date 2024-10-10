@@ -1,0 +1,1 @@
+A person walks 1m forwad, turns 180 degree to the right and walks another 1m forward.

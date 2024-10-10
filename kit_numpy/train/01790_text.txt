@@ -1,0 +1,1 @@
+Someone moves forward in a walk and then tumbles to the right side as if pushed, but then walks balk to the original trajectory.

@@ -1,0 +1,1 @@
+human walks forward starting with left, is turning around and walks back to the starting position

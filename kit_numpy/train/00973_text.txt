@@ -1,0 +1,1 @@
+A person moves 5 steps straight forward.

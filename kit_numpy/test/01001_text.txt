@@ -1,0 +1,1 @@
+A person doing 2 steps forward, while turning around on the second step in one motion and doing one step forward again from this position, so that it stand at the starting place againg, while facing the opposite direction

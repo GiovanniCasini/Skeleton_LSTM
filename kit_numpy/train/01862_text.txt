@@ -1,0 +1,1 @@
+A walking person is pushed from the back and compensates with bigger forward steps.

@@ -1,0 +1,1 @@
+A person walks forward while gradually turning to the left.

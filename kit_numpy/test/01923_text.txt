@@ -1,0 +1,1 @@
+A person walks forward, is pushed slightly to the left and continuous walking.

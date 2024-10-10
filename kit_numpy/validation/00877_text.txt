@@ -1,0 +1,1 @@
+Someone walks two steps forward, then turns around by 180° to the right and makes two steps again.

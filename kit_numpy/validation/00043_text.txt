@@ -1,0 +1,1 @@
+A person walks clockwise in a circle with 4 steps.

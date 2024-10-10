@@ -1,0 +1,1 @@
+A person performs a jump while turning 180 degrees to the left.

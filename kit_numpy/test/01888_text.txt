@@ -1,0 +1,1 @@
+A walking person is pushed to their left while walking and slows down, then continues walking on their original path.

@@ -1,0 +1,1 @@
+A human performs one step forward to pick something up from the ground.
