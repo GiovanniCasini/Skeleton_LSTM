@@ -124,18 +124,22 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
 
             motions = motions.to(device)
             texts = [text for text in texts]
-
+            '''
+            for k in range(1,motions.shape[1]):
+                outputs = model(motions[:,:k], texts)
+                loss = criterion(outputs, motions[:,:k])
+                loss.backward()
+                #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
+                optimizer.step()
+            '''
             outputs = model(motions, texts)
-
             loss = criterion(outputs, motions)
-
             loss.backward()
+            #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
             optimizer.step()
 
             running_loss += loss.item()
             pbar.set_description("Epoch {} Train Loss {:.5f}".format((e+1), running_loss/(batch+1)))
-            #print(f"Epoch {e} - loss: {running_loss/i}")
-            #train_loss.append(running_loss / len(train_loader))
 
             # Log training loss to wandb
         wandb.log({"train_loss": running_loss/(batch+1), "epoch": e+1})
@@ -161,8 +165,6 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
 
                     running_loss += loss.item()
                     pbar.set_description("Epoch {} Valid Loss {:.5f}".format((e+1), running_loss/(batch+1)))
-                    #print(f"Epoch {e} - loss: {running_loss/i}")
-                    #train_loss.append(running_loss / len(train_loader))
 
                 avg_loss = running_loss/(batch+1)
                 wandb.log({"valid_loss": avg_loss, "epoch": e+1})
@@ -196,8 +198,9 @@ def velocity_loss(predictions, target, loss_fn=nn.MSELoss()):
 
     v_loss = torch.mean(loss_fn(prediction_shift, target_shift)) * 1000
     r_loss = rec_loss(predictions, target, loss_fn)
-    loss = r_loss + v_loss
+    loss = r_loss + 100 * v_loss
     return loss
+
 
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
