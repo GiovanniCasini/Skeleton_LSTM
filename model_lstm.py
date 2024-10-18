@@ -122,13 +122,7 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
            
             motions = batch["x"].to(device)
             texts =  batch["text"]
-            # motions = torch.stack([el["motion"] for el in sample])
-            # motions = motions.flatten(2, 3) #(8, seq_len, 21, 3) -> (8, seq_len, 63)
-            # texts = [el["text"] for el in sample]
 
-            # motions = motions.to(device)
-            # texts = [text for text in texts]
-            
             '''
             for k in range(1,motions.shape[1]):
                 outputs = model(motions[:,:k], texts)
