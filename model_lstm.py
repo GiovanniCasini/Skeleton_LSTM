@@ -199,6 +199,7 @@ def velocity_loss(predictions, target, loss_fn=nn.MSELoss()):
 
 
 if __name__ == '__main__':
+    print("CACCA")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
