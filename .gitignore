@@ -3,3 +3,5 @@ wandb/*
 checkpoints/*
 visualizations/*
 __pycache__/*
+.vscode/launch.json
+data/__pycache__/*
