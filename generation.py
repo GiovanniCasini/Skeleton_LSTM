@@ -72,14 +72,14 @@ def main(model_path, id):
     testset_path = "/home/gcasini/tesi/LSTM_skeleton/kit_numpy/test"
     np_data1 = np.load(f"{testset_path}/{id}_motion.npy")
     base_dir = os.getcwd()
-    save_path = f"{base_dir}/tesi/LSTM_skeleton/visualizations/{id}_rec_metodo1_1batch.mp4"
+    save_path = f"{base_dir}/tesi/LSTM_skeleton/visualizations/{id}/{id}_velh32_m1batch32ini0_norelu_lr4.mp4"
     numpy_to_video(output, save_path)
     #compare_numpy_to_video(np_data1, output, save_path)
 
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    model_path = "/home/gcasini/tesi/LSTM_skeleton/checkpoints/rec_metodo1_1batch.ckpt"
     test_id = "00029"
-
+    model_path = f"/home/gcasini/tesi/LSTM_skeleton/checkpoints/velh32_m1batch32ini0_norelu_lr4.ckpt"
+    
     main(model_path, test_id)

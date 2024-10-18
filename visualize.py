@@ -59,7 +59,7 @@ def numpy_to_video(np_data, save_path):
 def main():
     base_dir = os.getcwd()
     # Carica il file .npy
-    file_name = "00029_motion"
+    file_name = "03902_motion"
     file_path = f"tesi/LSTM_skeleton/kit_numpy/test/{file_name}.npy"
     np_data = np.load(file_path)
 

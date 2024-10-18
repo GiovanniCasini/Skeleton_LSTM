@@ -33,8 +33,10 @@ class SkeletonLSTM(nn.Module):
 
         # Motion decoder
         self.lin2 = nn.Linear(self.hidden_size, 63) 
+        nn.init.constant_(self.lin2.weight, 0)
+        nn.init.constant_(self.lin2.bias, 0)
 
-        self.save_path = f"/home/gcasini/tesi/LSTM_skeleton/checkpoints/vel_metodo2_1batch.ckpt" 
+        self.save_path = f"/home/gcasini/tesi/LSTM_skeleton/checkpoints/velh32_m1batch32ini0_norelu_lr4.ckpt" 
 
 
     def forward(self, motions, texts):
@@ -59,7 +61,7 @@ class SkeletonLSTM(nn.Module):
         # Iterazione su ogni frame della sequenza di movimento
         for t in range(seq_length):
             # Passaggio attraverso il motion encoder
-            motion_encoding = F.relu(self.lin1(motion_frame)) #(8, 128)
+            motion_encoding = self.lin1(motion_frame) #(8, 128)
             # print(motion_encoding.size()) 
 
             # Concatenazione dell'embedding del testo con l'output del motion encoding
@@ -70,11 +72,11 @@ class SkeletonLSTM(nn.Module):
             lstm_output = self.lstm_cell(combined_input)[0]
 
             # Passaggio attraverso il motion decoder
-            output = F.relu(self.lin2(lstm_output))
+            output = self.lin2(lstm_output)
             # print(output.shape) #(8, 63)
 
             # metodo 1: somma frame corrente e predizione
-            '''
+            
             new_frame = motion_frame + output
             outputs.append(new_frame)
             motion_frame = new_frame
@@ -82,7 +84,7 @@ class SkeletonLSTM(nn.Module):
             # metodo 2: output direttamente nuovo frame
             outputs.append(output)
             motion_frame = output
-            
+            '''
 
         outputs = torch.stack(outputs, dim=1)
 
@@ -107,18 +109,22 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
 
             motions = motions.to(device)
             texts = [text for text in texts]
-
+            '''
+            for k in range(1,motions.shape[1]):
+                outputs = model(motions[:,:k], texts)
+                loss = criterion(outputs, motions[:,:k])
+                loss.backward()
+                #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
+                optimizer.step()
+            '''
             outputs = model(motions, texts)
-
             loss = criterion(outputs, motions)
-
             loss.backward()
+            #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
             optimizer.step()
 
             running_loss += loss.item()
             pbar.set_description("Epoch {} Train Loss {:.5f}".format((e+1), running_loss/(batch+1)))
-            #print(f"Epoch {e} - loss: {running_loss/i}")
-            #train_loss.append(running_loss / len(train_loader))
 
             # Log training loss to wandb
         wandb.log({"train_loss": running_loss/(batch+1), "epoch": e+1})
@@ -144,8 +150,6 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
 
                     running_loss += loss.item()
                     pbar.set_description("Epoch {} Valid Loss {:.5f}".format((e+1), running_loss/(batch+1)))
-                    #print(f"Epoch {e} - loss: {running_loss/i}")
-                    #train_loss.append(running_loss / len(train_loader))
 
                 avg_loss = running_loss/(batch+1)
                 wandb.log({"valid_loss": avg_loss, "epoch": e+1})
@@ -176,8 +180,9 @@ def velocity_loss(predictions, target, loss_fn=nn.MSELoss()):
 
     v_loss = torch.mean(loss_fn(prediction_shift, target_shift))
     r_loss = rec_loss(predictions, target, loss_fn)
-    loss = r_loss + v_loss
+    loss = r_loss + 100 * v_loss
     return loss
+
 
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -188,7 +193,7 @@ if __name__ == '__main__':
     num_epochs = 20
 
     # Initialize wandb and log hyperparameters
-    wandb.init(project="skeleton_lstm_gpu", name = "vel_metodo2_1batch")
+    wandb.init(project="skeleton_lstm_gpu", name = "velh32_m1batch32ini0_norelu_lr4")
     wandb.config.update({
         "hidden_size": hidden_size,
         "learning_rate": 0.0001,
@@ -203,9 +208,9 @@ if __name__ == '__main__':
 
     # Parser degli argomenti
     parser = argparse.ArgumentParser(description="Load data for motion, text, and length")
-    parser.add_argument('--path_train', type=str, default="tesi/LSTM_skeleton/kit_numpy/train", help='Path to the training data')
-    parser.add_argument('--path_val', type=str, default="tesi/LSTM_skeleton/kit_numpy/validation", help='Path to the validation data')
-    parser.add_argument('--path_test', type=str, default="tesi/LSTM_skeleton/kit_numpy/test", help='Path to the test data')
+    parser.add_argument('--path_train', type=str, default="/home/gcasini/tesi/LSTM_skeleton/kit_numpy/train", help='Path to the training data')
+    parser.add_argument('--path_val', type=str, default="/home/gcasini/tesi/LSTM_skeleton/kit_numpy/validation", help='Path to the validation data')
+    parser.add_argument('--path_test', type=str, default="/home/gcasini/tesi/LSTM_skeleton/kit_numpy/test", help='Path to the test data')
     args = parser.parse_args()
 
     # Caricamento dei dati
