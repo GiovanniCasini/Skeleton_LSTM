@@ -9,6 +9,10 @@ from kit_dataloader import get_dataloaders
 import wandb
 import os
 import enum
+from data.motion import AMASSMotionLoader
+from data.text import TextEmbeddings
+from data.text_multi_motion import TextMultiMotionDataset
+from torch.utils import data
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -113,17 +117,18 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
         running_loss = 0.0
         pbar = tqdm(enumerate(train_loader), total=len(train_loader))
 
-        for batch, sample in pbar:
+        for batch_id, batch in pbar:
             optimizer.zero_grad()
-            #motions = sample['motion'].flatten(2,3).to(device)
-            #texts = sample['text'].to(device)
-            
-            motions = torch.stack([el["motion"] for el in sample])
-            motions = motions.flatten(2, 3) #(8, seq_len, 21, 3) -> (8, seq_len, 63)
-            texts = [el["text"] for el in sample]
+           
+            motions = batch["x"].to(device)
+            texts =  batch["text"]
+            # motions = torch.stack([el["motion"] for el in sample])
+            # motions = motions.flatten(2, 3) #(8, seq_len, 21, 3) -> (8, seq_len, 63)
+            # texts = [el["text"] for el in sample]
 
-            motions = motions.to(device)
-            texts = [text for text in texts]
+            # motions = motions.to(device)
+            # texts = [text for text in texts]
+            
             '''
             for k in range(1,motions.shape[1]):
                 outputs = model(motions[:,:k], texts)
@@ -139,10 +144,10 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
             optimizer.step()
 
             running_loss += loss.item()
-            pbar.set_description("Epoch {} Train Loss {:.5f}".format((e+1), running_loss/(batch+1)))
+            pbar.set_description("Epoch {} Train Loss {:.5f}".format((e+1), running_loss/(batch_id+1)))
 
             # Log training loss to wandb
-        wandb.log({"train_loss": running_loss/(batch+1), "epoch": e+1})
+        wandb.log({"train_loss": running_loss/(batch_id+1), "epoch": e+1})
 
     
         if (e + 1) % 1 == 0: 
@@ -151,22 +156,19 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
             pbar = tqdm(enumerate(valid_loader), total=len(valid_loader))
 
             with torch.no_grad():  
-                for batch, sample in pbar:                    
-                    motions = torch.stack([el["motion"] for el in sample])
-                    motions = motions.flatten(2, 3) #(8, seq_len, 21, 3) -> (8, seq_len, 63)
-                    texts = [el["text"] for el in sample]
-
-                    motions = motions.to(device)
-                    texts = [text for text in texts]
+                for batch_id, batch in pbar:                    
+        
+                    motions = batch["x"].to(device)
+                    texts =  batch["text"]
 
                     outputs = model(motions, texts)
 
                     loss = criterion(outputs, motions)
 
                     running_loss += loss.item()
-                    pbar.set_description("Epoch {} Valid Loss {:.5f}".format((e+1), running_loss/(batch+1)))
+                    pbar.set_description("Epoch {} Valid Loss {:.5f}".format((e+1), running_loss/(batch_id+1)))
 
-                avg_loss = running_loss/(batch+1)
+                avg_loss = running_loss/(batch_id+1)
                 wandb.log({"valid_loss": avg_loss, "epoch": e+1})
                 if avg_loss < valid_loss:
                     valid_loss = avg_loss
@@ -208,16 +210,18 @@ if __name__ == '__main__':
 
     criterion = rec_loss
     method = Method("current_frame")
+    dataset_name = "kitml" # "kitml" or "humanml"
 
     # Iperparametri
     hidden_size = 32
     num_epochs = 20
-    bs = 1
+    bs = 2
     lr = 0.0001
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
     method_name = "1" if method.value == "current_frame" else "2"
     name = f"Loss{criterion_name}_method{method_name}_bs{bs}_K"
+    feature_size = 63 if dataset_name == "kitml" else 205
 
     # Initialize wandb and log hyperparameters
     wandb.init(project="skeleton_lstm_gpu", name=name)
@@ -228,22 +232,31 @@ if __name__ == '__main__':
     })
 
     # Inizializzazione del modello, della funzione di perdita e dell'ottimizzatore
-    model = SkeletonLSTM(hidden_size=hidden_size, feature_size=63, name=name, method=method)
+    model = SkeletonLSTM(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
-    # Parser degli argomenti
-    parser = argparse.ArgumentParser(description="Load data for motion, text, and length")
-    parser.add_argument('--path_train', type=str, default=f"{os.getcwd()}/kit_numpy/train", help='Path to the training data')
-    parser.add_argument('--path_val', type=str, default=f"{os.getcwd()}/kit_numpy/validation", help='Path to the validation data')
-    parser.add_argument('--path_test', type=str, default=f"{os.getcwd()}/kit_numpy/test", help='Path to the test data')
-    args = parser.parse_args()
+    if dataset_name == "kitml":
+        # Parser degli argomenti
+        parser = argparse.ArgumentParser(description="Load data for motion, text, and length")
+        parser.add_argument('--path_train', type=str, default=f"{os.getcwd()}/kit_numpy/train", help='Path to the training data')
+        parser.add_argument('--path_val', type=str, default=f"{os.getcwd()}/kit_numpy/validation", help='Path to the validation data')
+        parser.add_argument('--path_test', type=str, default=f"{os.getcwd()}/kit_numpy/test", help='Path to the test data')
+        args = parser.parse_args()
 
-    # Caricamento dei dati
-    dataset = get_dataloaders(args, bs=bs)
-    train_loader = dataset["train"]
-    valid_loader = dataset["valid"]
-    test_loader = dataset["test"]
+        # Caricamento dei dati
+        dataset = get_dataloaders(args, bs=bs)
+        train_loader = dataset["train"]
+        valid_loader = dataset["valid"]
+        test_loader = dataset["test"]
+    elif dataset_name == "humanml":
+        motion_loader = AMASSMotionLoader(fps=20, base_dir="datasets/motions/AMASS_20.0_fps_nh_smplrifke")
+        train_dataset = TextMultiMotionDataset(name="humanml3d", text_encoder=None, motion_loader=motion_loader, split="train")
+        val_dataset = TextMultiMotionDataset(name="humanml3d", text_encoder=None, motion_loader=motion_loader, split="me/test")
+
+        train_loader = data.DataLoader(dataset=train_dataset, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=train_dataset.collate_fn)
+        valid_loader = data.DataLoader(dataset=val_dataset, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=train_dataset.collate_fn)
+
 
     train(model, train_loader, valid_loader, criterion, optimizer, num_epochs)
 

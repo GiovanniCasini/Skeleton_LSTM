@@ -35,7 +35,7 @@ class Dataset(data.Dataset):
         with open(self.texts[index], 'r') as f:
             text = f.read()
 
-        return {'motion': normalized_motion,
+        return {'x': normalized_motion,
                 'length': length,
                 'text': text
                 }
@@ -46,12 +46,21 @@ class Dataset(data.Dataset):
 def collate_fn(batch):
     max_length = max([item['length'] for item in batch])
     for item in batch:
-        motion, length = item['motion'], item['length']
+        motion, length = item['x'], item['length']
         padding_length = max_length - length
         padding = torch.zeros((padding_length, motion.shape[1], motion.shape[2]))
-        item['motion'] = torch.cat((motion, padding), dim=0)
+        item['x'] = torch.cat((motion, padding), dim=0)
         item['length'] = max_length
-    return batch
+
+    motions = torch.stack([el["x"] for el in batch])
+    motions = motions.flatten(2, 3) #(8, seq_len, 21, 3) -> (8, seq_len, 63)
+    texts = [el["text"] for el in batch]
+    batch_= {}
+    batch_["x"] = motions
+    batch_["text"] = texts
+    batch_["length"] = max_length
+
+    return batch_
 
 def get_dataloaders(args, bs=1):
     dataset = {}
