@@ -53,14 +53,14 @@ def collate_fn(batch):
         item['length'] = max_length
     return batch
 
-def get_dataloaders(args):
+def get_dataloaders(args, bs=1):
     dataset = {}
     train_data = Dataset(args.path_train)
-    dataset["train"] = data.DataLoader(dataset=train_data, batch_size=1, shuffle=True, num_workers=8, pin_memory=True, collate_fn=collate_fn)
+    dataset["train"] = data.DataLoader(dataset=train_data, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=collate_fn)
     valid_data = Dataset(args.path_val)
-    dataset["valid"] = data.DataLoader(dataset=valid_data, batch_size=1, shuffle=True, num_workers=8, pin_memory=True, collate_fn=collate_fn)
+    dataset["valid"] = data.DataLoader(dataset=valid_data, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=collate_fn)
     test_data = Dataset(args.path_test)
-    dataset["test"] = data.DataLoader(dataset=test_data, batch_size=1, shuffle=True, num_workers=8, pin_memory=True, collate_fn=collate_fn)
+    dataset["test"] = data.DataLoader(dataset=test_data, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=collate_fn)
     return dataset
 
 if __name__ == "__main__":

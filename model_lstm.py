@@ -206,13 +206,14 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    criterion = velocity_loss
+    criterion = rec_loss
     method = Method("current_frame")
 
     # Iperparametri
     hidden_size = 32
-    num_epochs = 50
-    bs = 8
+    num_epochs = 20
+    bs = 1
+    lr = 0.0001
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
     method_name = "1" if method.value == "current_frame" else "2"
@@ -222,14 +223,14 @@ if __name__ == '__main__':
     wandb.init(project="skeleton_lstm_gpu", name=name)
     wandb.config.update({
         "hidden_size": hidden_size,
-        "learning_rate": 0.0001,
+        "learning_rate": lr,
         "epochs": num_epochs
     })
 
     # Inizializzazione del modello, della funzione di perdita e dell'ottimizzatore
     model = SkeletonLSTM(hidden_size=hidden_size, feature_size=63, name=name, method=method)
     model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
 
     # Parser degli argomenti
     parser = argparse.ArgumentParser(description="Load data for motion, text, and length")
@@ -239,7 +240,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Caricamento dei dati
-    dataset = get_dataloaders(args)
+    dataset = get_dataloaders(args, bs=bs)
     train_loader = dataset["train"]
     valid_loader = dataset["valid"]
     test_loader = dataset["test"]
