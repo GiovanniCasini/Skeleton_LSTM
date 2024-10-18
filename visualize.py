@@ -57,14 +57,13 @@ def numpy_to_video(np_data, save_path):
 
 
 def main():
-    base_dir = os.getcwd()
     # Carica il file .npy
     file_name = "00029_motion"
-    file_path = f"tesi/LSTM_skeleton/kit_numpy/test/{file_name}.npy"
+    file_path = f"{os.getcwd()}/kit_numpy/test/{file_name}.npy"
     np_data = np.load(file_path)
 
     # Chiama la funzione numpy_to_video con i dati caricati e il percorso di salvataggio
-    save_path = f"{base_dir}/tesi/LSTM_skeleton/visualizations/{file_name}.mp4"
+    save_path = f"{os.getcwd()}/visualizations/{file_name}.mp4"
     numpy_to_video(np_data, save_path)
 
 

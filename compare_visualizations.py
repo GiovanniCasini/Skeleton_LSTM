@@ -79,7 +79,7 @@ def compare_numpy_to_video(np_data1, np_data2, save_path):
     print("Done")
 
 
-def main():
+def generate():
     base_dir = os.getcwd()
     # Carica i file .npy
     file_name1 = "00182_motion"
@@ -96,4 +96,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    generate()

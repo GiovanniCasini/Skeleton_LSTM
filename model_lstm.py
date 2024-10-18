@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from transformers import BartTokenizer, BartModel
 from transformers import BertTokenizer, BertModel
 import torch.nn.functional as F
 import torch.optim as optim
@@ -8,11 +7,19 @@ import argparse
 from tqdm import tqdm
 from kit_dataloader import get_dataloaders
 import wandb
+import os
+import enum
+
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+class Method(enum.Enum):
+    method_1 = 'current_frame'
+    method_2 = 'output'
+
+
 class SkeletonLSTM(nn.Module):
-    def __init__(self, hidden_size):
+    def __init__(self, method: Method=None, hidden_size=32, feature_size=63, name="vel_metodo2_1batch"):
         super(SkeletonLSTM, self).__init__()
 
         # self.num_layers = num_layers
@@ -26,19 +33,30 @@ class SkeletonLSTM(nn.Module):
         self.lin_text = nn.Linear(768, int(self.hidden_size/2))
 
         # Motion encoder
-        self.lin1 = nn.Linear(63, int(self.hidden_size/2))
+        self.lin1 = nn.Linear(feature_size, int(self.hidden_size/2))
 
         # LSTM cell
         self.lstm_cell = nn.LSTMCell(input_size=self.hidden_size, hidden_size=hidden_size)
 
         # Motion decoder
-        self.lin2 = nn.Linear(self.hidden_size, 63) 
+        self.lin2 = nn.Linear(self.hidden_size, feature_size) 
+        
+        nn.init.constant_(self.lin1.weight, 0)
+        nn.init.constant_(self.lin1.bias, 0)
 
-        self.save_path = f"/home/gcasini/tesi/LSTM_skeleton/checkpoints/vel_metodo2_1batch.ckpt" 
+        nn.init.constant_(self.lin2.weight, 0)
+        nn.init.constant_(self.lin2.bias, 0)
+
+        self.save_path = f"{os.getcwd()}/checkpoints/{name}.ckpt" 
+        self.method = method
+        self.feature_size = feature_size
+        self.name = name
+        if self.method is None: 
+            self.method = Method("current_frame")
 
 
     def forward(self, motions, texts):
-        batch_size, seq_length, _ = motions.size()
+        batch_size, seq_length, _ = motions.shape
 
         # Embedding del testo
         # print(texts)
@@ -48,42 +66,41 @@ class SkeletonLSTM(nn.Module):
         mask = text_tokens.attention_mask
         # BERT
         last_hidden_state, text_embedding = self.text_encoder(input_ids=input_ids, attention_mask=mask,return_dict=False)
-        # print(text_embedding.shape) # (8, 768)
+        # print(text_embedding.shape) # (bs, 768)
         text_embedding = self.lin_text(text_embedding)
-        # print(text_embedding.shape) # (8, 128)
+        # print(text_embedding.shape) # (bs, hideen_size/2)
         outputs = []
 
         motion_frame = motions[:, 0, :] # primo frame
-        # print(motion_frame.size()) #(8, 63)
+        # print(motion_frame.size()) #(bs, 63)
         
         # Iterazione su ogni frame della sequenza di movimento
         for t in range(seq_length):
             # Passaggio attraverso il motion encoder
-            motion_encoding = F.relu(self.lin1(motion_frame)) #(8, 128)
+            motion_encoding = self.lin1(motion_frame) #(bs, 128)
             # print(motion_encoding.size()) 
 
             # Concatenazione dell'embedding del testo con l'output del motion encoding
             combined_input = torch.cat((motion_encoding, text_embedding), dim=-1)
-            # print(combined_input.size()) #(8, 256)
+            # print(combined_input.size()) #(bs, 256)
 
             # Passaggio attraverso l'LSTM cell
             lstm_output = self.lstm_cell(combined_input)[0]
 
             # Passaggio attraverso il motion decoder
-            output = F.relu(self.lin2(lstm_output))
-            # print(output.shape) #(8, 63)
+            output = self.lin2(lstm_output)
+            # print(output.shape) #(bs, 63)
 
             # metodo 1: somma frame corrente e predizione
-            '''
-            new_frame = motion_frame + output
-            outputs.append(new_frame)
-            motion_frame = new_frame
-            '''
-            # metodo 2: output direttamente nuovo frame
-            outputs.append(output)
-            motion_frame = output
+            if self.method.value == "current_frame":
+                new_frame = motion_frame + output
+                outputs.append(new_frame)
+                motion_frame = new_frame
+            elif self.method.value == "output":
+                # metodo 2: output direttamente nuovo frame
+                outputs.append(output)
+                motion_frame = output
             
-
         outputs = torch.stack(outputs, dim=1)
 
         return outputs
@@ -157,6 +174,9 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
 def save_checkpoint(model, optimizer, epoch, filename="checkpoint.pth"):
     print("Saving model...")
     checkpoint = {
+        "feature_size": model.feature_size,
+        "name":model.name,
+        "method":model.method,
         "hidden_size":model.hidden_size,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
@@ -174,7 +194,7 @@ def velocity_loss(predictions, target, loss_fn=nn.MSELoss()):
     prediction_shift = predictions[:, 1:, :] - predictions[:, :-1, :]
     target_shift = target[:, 1:, :] - target[:, :-1, :]
 
-    v_loss = torch.mean(loss_fn(prediction_shift, target_shift))
+    v_loss = torch.mean(loss_fn(prediction_shift, target_shift)) * 1000
     r_loss = rec_loss(predictions, target, loss_fn)
     loss = r_loss + v_loss
     return loss
@@ -183,12 +203,20 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
+    criterion = velocity_loss
+    method = Method("current_frame")
+
     # Iperparametri
     hidden_size = 32
-    num_epochs = 20
+    num_epochs = 50
+    bs = 8
+
+    criterion_name = "Vel" if criterion == velocity_loss else "Rec"
+    method_name = "1" if method.value == "current_frame" else "2"
+    name = f"Loss{criterion_name}_method{method_name}_bs{bs}_K"
 
     # Initialize wandb and log hyperparameters
-    wandb.init(project="skeleton_lstm_gpu", name = "vel_metodo2_1batch")
+    wandb.init(project="skeleton_lstm_gpu", name=name)
     wandb.config.update({
         "hidden_size": hidden_size,
         "learning_rate": 0.0001,
@@ -196,16 +224,15 @@ if __name__ == '__main__':
     })
 
     # Inizializzazione del modello, della funzione di perdita e dell'ottimizzatore
-    model = SkeletonLSTM(hidden_size)
+    model = SkeletonLSTM(hidden_size=hidden_size, feature_size=63, name=name, method=method)
     model.to(device)
-    criterion = velocity_loss
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
     # Parser degli argomenti
     parser = argparse.ArgumentParser(description="Load data for motion, text, and length")
-    parser.add_argument('--path_train', type=str, default="tesi/LSTM_skeleton/kit_numpy/train", help='Path to the training data')
-    parser.add_argument('--path_val', type=str, default="tesi/LSTM_skeleton/kit_numpy/validation", help='Path to the validation data')
-    parser.add_argument('--path_test', type=str, default="tesi/LSTM_skeleton/kit_numpy/test", help='Path to the test data')
+    parser.add_argument('--path_train', type=str, default=f"{os.getcwd()}/kit_numpy/train", help='Path to the training data')
+    parser.add_argument('--path_val', type=str, default=f"{os.getcwd()}/kit_numpy/validation", help='Path to the validation data')
+    parser.add_argument('--path_test', type=str, default=f"{os.getcwd()}/kit_numpy/test", help='Path to the test data')
     args = parser.parse_args()
 
     # Caricamento dei dati
