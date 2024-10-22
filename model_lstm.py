@@ -50,7 +50,6 @@ class SkeletonLSTM(nn.Module):
         self.lin3 = nn.Linear(self.hidden_size, self.hidden_size) 
         self.lin4 = nn.Linear(self.hidden_size, feature_size) 
         
-
         nn.init.constant_(self.lin4.weight, 0)
         nn.init.constant_(self.lin4.bias, 0)
 
@@ -195,17 +194,15 @@ def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 if __name__ == '__main__':
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
-
 
     criterion = rec_loss
     method = Method("current_frame")
     dataset_name = "kitml" # "kitml" or "humanml"
-    extra_name = "transformer_h16"
+    model_class = SkeletonFormer # SkeletonFormer or SkeletonLSTM
 
     # Iperparametri
-    hidden_size = 16
+    hidden_size = 32
     num_epochs = 20
     bs = 1
     lr = 0.00005
@@ -213,10 +210,10 @@ if __name__ == '__main__':
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
     method_name = "1" if method.value == "current_frame" else "2"
     dataset_sigla = "K" if dataset_name == "kitml" else "H"
-    name = f"Loss{criterion_name}_method{method_name}_bs{bs}_dataset{dataset_sigla}_h{hidden_size}"
+    name = f"Model{model_class.__name__}_Loss{criterion_name}_dataset{dataset_sigla}_method{method_name}_bs{bs}_h{hidden_size}"
     feature_size = 63 if dataset_name == "kitml" else 205
 
-    print(name)
+    print(f"name: {name}")
 
     # Initialize wandb and log hyperparameters
     wandb.init(project="skeleton_lstm_gpu", name=name)
@@ -229,11 +226,11 @@ if __name__ == '__main__':
     print(f"Start training - name: {name} - bs {bs} - lr {lr} - epochs {num_epochs} - hidden size {hidden_size}")
 
     # Inizializzazione del modello, della funzione di perdita e dell'ottimizzatore
-    #model = SkeletonLSTM(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)
-    model = SkeletonFormer(device, hidden_size=hidden_size, feature_size=feature_size, name=name)
+    # model = SkeletonLSTM(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)
+    model = model_class(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    print(count_parameters(model))
+    print(f"Num parameters: {count_parameters(model)}")
 
     if dataset_name == "kitml":
         # Parser degli argomenti

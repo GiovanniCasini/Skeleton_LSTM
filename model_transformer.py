@@ -8,6 +8,8 @@ import math
 
 from transformers import BertTokenizer, BertModel
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 # Temporal Bias, inspired by ALiBi: https://github.com/ofirpress/attention_with_linear_biases
 def init_biased_mask(n_head, max_seq_len, period):
     def get_slopes(n):
@@ -58,13 +60,14 @@ class PeriodicPositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class SkeletonFormer(nn.Module):
-    def __init__(self, device, hidden_size=32, feature_size=63, name="model_name", method=None):
+    def __init__(self, hidden_size=32, feature_size=63, name="model_name", method=None):
         super(SkeletonFormer, self).__init__()
         """
         audio: (batch_size, raw_wav)
         template: (batch_size, V*3)
         vertice: (batch_size, seq_len, V*3)
         """
+        self.name = name
         self.feature_size = feature_size
         self.hidden_size = hidden_size
         self.period = 30
