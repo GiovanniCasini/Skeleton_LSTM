@@ -13,6 +13,7 @@ from data.motion import AMASSMotionLoader
 from data.text import TextEmbeddings
 from data.text_multi_motion import TextMultiMotionDataset
 from torch.utils import data
+from model_transformer import *
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -23,7 +24,7 @@ class Method(enum.Enum):
 
 
 class SkeletonLSTM(nn.Module):
-    def __init__(self, method: Method=None, hidden_size=32, feature_size=63, name="vel_metodo2_1batch"):
+    def __init__(self, method: Method=None, hidden_size=32, feature_size=63, name="model_name"):
         super(SkeletonLSTM, self).__init__()
 
         # self.num_layers = num_layers
@@ -40,16 +41,18 @@ class SkeletonLSTM(nn.Module):
         self.lin1 = nn.Linear(feature_size, int(self.hidden_size/2))
 
         # LSTM cell
-        self.lstm_cell = nn.LSTMCell(input_size=self.hidden_size, hidden_size=hidden_size)
+        self.lstm_cell1 = nn.LSTMCell(input_size=self.hidden_size, hidden_size=hidden_size)
+        self.lstm_cell2 = nn.LSTMCell(input_size=self.hidden_size, hidden_size=hidden_size)
+        self.lstm_cell3 = nn.LSTMCell(input_size=self.hidden_size, hidden_size=hidden_size)
 
         # Motion decoder
-        self.lin2 = nn.Linear(self.hidden_size, feature_size) 
+        self.lin2 = nn.Linear(self.hidden_size, self.hidden_size) 
+        self.lin3 = nn.Linear(self.hidden_size, self.hidden_size) 
+        self.lin4 = nn.Linear(self.hidden_size, feature_size) 
         
-        nn.init.constant_(self.lin1.weight, 0)
-        nn.init.constant_(self.lin1.bias, 0)
 
-        nn.init.constant_(self.lin2.weight, 0)
-        nn.init.constant_(self.lin2.bias, 0)
+        nn.init.constant_(self.lin4.weight, 0)
+        nn.init.constant_(self.lin4.bias, 0)
 
         self.save_path = f"{os.getcwd()}/checkpoints/{name}.ckpt" 
         self.method = method
@@ -62,41 +65,32 @@ class SkeletonLSTM(nn.Module):
     def forward(self, motions, texts):
         batch_size, seq_length, _ = motions.shape
 
-        # Embedding del testo
-        # print(texts)
-        text_tokens = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True).to(device) # padding='max_length', max_length = self.max_length
-        # print(text_tokens)
+        # Embedding del testo BERT
+        text_tokens = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True).to(device)
         input_ids = text_tokens.input_ids
         mask = text_tokens.attention_mask
-        # BERT
-        last_hidden_state, text_embedding = self.text_encoder(input_ids=input_ids, attention_mask=mask,return_dict=False)
-        # print(text_embedding.shape) # (bs, 768)
-        text_embedding = self.lin_text(text_embedding)
-        # print(text_embedding.shape) # (bs, hideen_size/2)
+        last_hidden_state, text_embedding = self.text_encoder(input_ids=input_ids, attention_mask=mask,return_dict=False) # (bs, 768)
+        text_embedding = self.lin_text(text_embedding) # (bs, hideen_size/2)
         outputs = []
 
-        motion_frame = motions[:, 0, :] # primo frame
-        # print(motion_frame.size()) #(bs, 63)
+        motion_frame = motions[:, 0, :] # primo frame (bs, 63)
         
         # Iterazione su ogni frame della sequenza di movimento
         for t in range(seq_length):
-            # Passaggio attraverso il motion encoder
             motion_encoding = self.lin1(motion_frame) #(bs, 128)
-            # print(motion_encoding.size()) 
+            
+            combined_input = torch.cat((motion_encoding, text_embedding), dim=-1) #(bs, 256)
 
-            # Concatenazione dell'embedding del testo con l'output del motion encoding
-            combined_input = torch.cat((motion_encoding, text_embedding), dim=-1)
-            # print(combined_input.size()) #(bs, 256)
+            lstm_output = self.lstm_cell1(combined_input)[0]
+            lstm_output = self.lstm_cell2(lstm_output)[0]
+            lstm_output = self.lstm_cell3(lstm_output)[0]
 
-            # Passaggio attraverso l'LSTM cell
-            lstm_output = self.lstm_cell(combined_input)[0]
+            output = self.lin2(lstm_output) #(bs, 63)
+            output = self.lin3(output)
+            output = self.lin4(output)
 
-            # Passaggio attraverso il motion decoder
-            output = self.lin2(lstm_output)
-            # print(output.shape) #(bs, 63)
-
-            # metodo 1: somma frame corrente e predizione
             if self.method.value == "current_frame":
+                # metodo 1: somma frame corrente e predizione
                 new_frame = motion_frame + output
                 outputs.append(new_frame)
                 motion_frame = new_frame
@@ -140,7 +134,7 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
             running_loss += loss.item()
             pbar.set_description("Epoch {} Train Loss {:.5f}".format((e+1), running_loss/(batch_id+1)))
 
-            # Log training loss to wandb
+        # Log training loss to wandb
         wandb.log({"train_loss": running_loss/(batch_id+1), "epoch": e+1})
 
     
@@ -194,20 +188,24 @@ def velocity_loss(predictions, target, loss_fn=nn.MSELoss()):
 
     v_loss = torch.mean(loss_fn(prediction_shift, target_shift)) * 1000
     r_loss = rec_loss(predictions, target, loss_fn)
-    loss = r_loss + 100 * v_loss
+    loss = r_loss + v_loss
     return loss
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
+
     criterion = rec_loss
     method = Method("current_frame")
-    dataset_name = "humanml" # "kitml" or "humanml"
+    dataset_name = "kitml" # "kitml" or "humanml"
+    extra_name = "transformer_h16"
 
     # Iperparametri
-    hidden_size = 32
+    hidden_size = 16
     num_epochs = 20
     bs = 1
     lr = 0.00005
@@ -217,6 +215,8 @@ if __name__ == '__main__':
     dataset_sigla = "K" if dataset_name == "kitml" else "H"
     name = f"Loss{criterion_name}_method{method_name}_bs{bs}_dataset{dataset_sigla}_h{hidden_size}"
     feature_size = 63 if dataset_name == "kitml" else 205
+
+    print(name)
 
     # Initialize wandb and log hyperparameters
     wandb.init(project="skeleton_lstm_gpu", name=name)
@@ -229,9 +229,11 @@ if __name__ == '__main__':
     print(f"Start training - name: {name} - bs {bs} - lr {lr} - epochs {num_epochs} - hidden size {hidden_size}")
 
     # Inizializzazione del modello, della funzione di perdita e dell'ottimizzatore
-    model = SkeletonLSTM(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)
+    #model = SkeletonLSTM(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)
+    model = SkeletonFormer(device, hidden_size=hidden_size, feature_size=feature_size, name=name)
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
+    print(count_parameters(model))
 
     if dataset_name == "kitml":
         # Parser degli argomenti

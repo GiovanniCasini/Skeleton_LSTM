@@ -72,12 +72,13 @@ def numpy_to_video(np_data, save_path, connections=True, body_connections="kitml
 
 def main():
     # Carica il file .npy
-    file_name = "00029_motion"
+    id = "00003"
+    file_name = f"{id}_motion"
     file_path = f"{os.getcwd()}/kit_numpy/test/{file_name}.npy"
     np_data = np.load(file_path)
 
     # Chiama la funzione numpy_to_video con i dati caricati e il percorso di salvataggio
-    save_path = f"{os.getcwd()}/visualizations/{file_name}.mp4"
+    save_path = f"{os.getcwd()}/visualizations/{id}/{file_name}.mp4"
     numpy_to_video(np_data, save_path)
 
 

@@ -8,6 +8,7 @@ from compare_visualizations import *
 from model_lstm import Method, SkeletonLSTM
 from tools.extract_joints import extract_joints
 from tools.smpl_layer import SMPLH
+from model_transformer import SkeletonFormer
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -23,7 +24,7 @@ def load_model(model_path, name):
     feature_size = checkpoint["model_state_dict"]["lin1.weight"].shape[-1]
     hidden_size = checkpoint["hidden_size"]
     method = Method("current_frame") if "method1" in name else (Method("output") if "method2" in name else 0)
-    model = SkeletonLSTM(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)  
+    model = SkeletonFormer(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)  
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 
