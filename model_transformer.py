@@ -60,7 +60,7 @@ class PeriodicPositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class SkeletonFormer(nn.Module):
-    def __init__(self, hidden_size=32, feature_size=63, name="model_name", method=None):
+    def __init__(self, device, hidden_size=32, feature_size=63, name="model_name", method=None):
         super(SkeletonFormer, self).__init__()
         """
         audio: (batch_size, raw_wav)
@@ -80,6 +80,8 @@ class SkeletonFormer(nn.Module):
         for param in self.text_encoder.parameters():
             param.requires_grad = False
         self.lin_text = nn.Linear(768, int(self.hidden_size))
+        self.encoder_layer = nn.TransformerEncoderLayer(d_model=self.hidden_size, nhead=4, batch_first=True)
+        self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=1)
 
         # motion encoder
         self.motion_encoder = nn.Linear(feature_size, self.hidden_size)
@@ -109,7 +111,8 @@ class SkeletonFormer(nn.Module):
         input_ids = text_tokens.input_ids
         mask = text_tokens.attention_mask
         last_hidden_state, text_embedding = self.text_encoder(input_ids=input_ids, attention_mask=mask,return_dict=False) # (bs, 768)
-        text_embedding = self.lin_text(text_embedding).unsqueeze(1).expand(batch_size, seq_length, self.hidden_size) # (bs, hideen_size/2)
+        text_embedding = self.lin_text(text_embedding.unsqueeze(1).expand(batch_size, seq_length, 768)) # (bs, hideen_size/2)
+        text_embedding = self.transformer_encoder(text_embedding)
         outputs = []
         
         motion_frame = motions[:, 0, :] # primo frame (bs, 63)
