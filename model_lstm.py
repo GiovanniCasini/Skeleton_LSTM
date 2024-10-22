@@ -131,7 +131,7 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
             optimizer.step()
 
             running_loss += loss.item()
-            pbar.set_description("Epoch {} Train Loss {:.5f}".format((e+1), running_loss/(batch_id+1)))
+            pbar.set_description("Epoch {} Train Loss {:.7f}".format((e+1), running_loss/(batch_id+1)))
 
         # Log training loss to wandb
         wandb.log({"train_loss": running_loss/(batch_id+1), "epoch": e+1})
@@ -153,7 +153,7 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
                     loss = criterion(outputs, motions)
 
                     running_loss += loss.item()
-                    pbar.set_description("Epoch {} Valid Loss {:.5f}".format((e+1), running_loss/(batch_id+1)))
+                    pbar.set_description("Epoch {} Valid Loss {:.7f}".format((e+1), running_loss/(batch_id+1)))
 
                 avg_loss = running_loss/(batch_id+1)
                 wandb.log({"valid_loss": avg_loss, "epoch": e+1})
@@ -167,7 +167,6 @@ def save_checkpoint(model, optimizer, epoch, filename="checkpoint.pth"):
     checkpoint = {
         "feature_size": model.feature_size,
         "name":model.name,
-        "method":model.method,
         "hidden_size":model.hidden_size,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),

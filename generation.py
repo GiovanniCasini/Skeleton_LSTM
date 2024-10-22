@@ -7,7 +7,6 @@ from compare_visualizations import *
 
 from model_lstm import Method, SkeletonLSTM
 from tools.extract_joints import extract_joints
-from tools.smpl_layer import SMPLH
 from model_transformer import SkeletonFormer
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -21,10 +20,10 @@ def T(x):
 def load_model(model_path, name):    
     # Carica il checkpoint
     checkpoint = torch.load(model_path)
-    feature_size = checkpoint["model_state_dict"]["lin1.weight"].shape[-1]
+    feature_size = 63 #checkpoint["model_state_dict"]["lin1.weight"].shape[-1]
     hidden_size = checkpoint["hidden_size"]
     method = Method("current_frame") if "method1" in name else (Method("output") if "method2" in name else 0)
-    model = SkeletonFormer(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)  
+    model = SkeletonFormer(device=device, hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)  
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 
@@ -33,7 +32,7 @@ def load_model(model_path, name):
 
 def load_input(idx, dataset="kitml"):
     if dataset == "kitml":
-        testset_path = f"{os.getcwd()}/kit_numpy/test"
+        testset_path = f"{os.getcwd()}/kit_numpy/train"
         motion = torch.from_numpy(np.load(f"{testset_path}/{idx}_motion.npy"))
         maxx, minn = 6675.25, -6442.60
         motion = (motion - minn) / (maxx - minn)
@@ -107,11 +106,13 @@ def generate(model_path, id, name, dataset, y_is_z_axis=False, connections=True)
     
     save_path = f"{os.getcwd()}/visualizations/{name}_id{id}.mp4"
     if output.shape[-1] != 205:
-        testset_path = f"{os.getcwd()}/kit_numpy/test"
+        testset_path = f"{os.getcwd()}/kit_numpy/train"
         # np_data1 = np.load(f"{testset_path}/{id}_motion.npy")
         numpy_to_video(output, save_path, connections=connections, text=text)
 
     elif output.shape[-1] == 205:
+        from tools.smpl_layer import SMPLH
+
         output = output[0]
         smplh = SMPLH(
             path="deps/smplh",
@@ -138,10 +139,10 @@ def generate(model_path, id, name, dataset, y_is_z_axis=False, connections=True)
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    name = "LossRec_method1_bs1_datasetH_h32"
+    name = "LossRec_method1_bs1_datasetK_h8transformer"
     model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
     dataset = "humanml3d" if "H" in name else "kitml"
-    test_id = "000000" if dataset=="humanml3d" else "03902"
+    test_id = "000000" if dataset=="humanml3d" else "00002"
     y_is_z_axis = True if dataset=="humanml3d" else False
 
     generate(model_path=model_path, id=test_id, name=name, dataset=dataset, y_is_z_axis=y_is_z_axis)
