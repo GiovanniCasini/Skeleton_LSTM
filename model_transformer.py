@@ -72,6 +72,7 @@ class SkeletonFormer(nn.Module):
         self.hidden_size = hidden_size
         self.period = 30
         self.device = device
+        self.method = method
 
         # BERT
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-cased')

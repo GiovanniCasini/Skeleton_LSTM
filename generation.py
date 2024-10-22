@@ -18,13 +18,13 @@ def T(x):
     else:
         return x.transpose(*np.arange(x.ndim - 1, -1, -1))
 
-def load_model(model_path, name):    
+def load_model(model_class, model_path, name, feature_size=63):    
     # Carica il checkpoint
     checkpoint = torch.load(model_path)
-    feature_size = checkpoint["model_state_dict"]["lin1.weight"].shape[-1]
+    feature_size = feature_size
     hidden_size = checkpoint["hidden_size"]
     method = Method("current_frame") if "method1" in name else (Method("output") if "method2" in name else 0)
-    model = SkeletonFormer(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)  
+    model = model_class(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)  
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 
@@ -93,9 +93,9 @@ def normalize_output(output, dataset):
     return output
 
 
-def generate(model_path, id, name, dataset, y_is_z_axis=False, connections=True):
+def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_axis=False, connections=True):
 
-    model = load_model(model_path, name=name)
+    model = load_model(model_class=model_class, feature_size=feature_size, model_path=model_path, name=name)
     model.to(device)
 
     motion, text, length = load_input(id, dataset=dataset)
@@ -138,10 +138,13 @@ def generate(model_path, id, name, dataset, y_is_z_axis=False, connections=True)
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    name = "LossRec_method1_bs1_datasetH_h32"
+    name = "ModelSkeletonFormer_LossRec_datasetH_method1_bs1_h4"
+
+    model_class = SkeletonFormer if "SkeletonFormer" in name else SkeletonLSTM
     model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
     dataset = "humanml3d" if "H" in name else "kitml"
     test_id = "000000" if dataset=="humanml3d" else "03902"
     y_is_z_axis = True if dataset=="humanml3d" else False
+    feature_size = 205 if dataset=="humanml3d" else 63 
 
-    generate(model_path=model_path, id=test_id, name=name, dataset=dataset, y_is_z_axis=y_is_z_axis)
+    generate(model_class=model_class, feature_size=feature_size, model_path=model_path, id=test_id, name=name, dataset=dataset, y_is_z_axis=y_is_z_axis)

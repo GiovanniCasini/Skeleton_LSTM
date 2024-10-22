@@ -27,6 +27,8 @@ class SkeletonLSTM(nn.Module):
     def __init__(self, method: Method=None, hidden_size=32, feature_size=63, name="model_name"):
         super(SkeletonLSTM, self).__init__()
 
+        self.method = method
+
         # self.num_layers = num_layers
         self.hidden_size = hidden_size
 
@@ -198,14 +200,14 @@ if __name__ == '__main__':
 
     criterion = rec_loss
     method = Method("current_frame")
-    dataset_name = "kitml" # "kitml" or "humanml"
+    dataset_name = "humanml" # "kitml" or "humanml"
     model_class = SkeletonFormer # SkeletonFormer or SkeletonLSTM
 
     # Iperparametri
-    hidden_size = 32
+    hidden_size = 16
     num_epochs = 20
     bs = 1
-    lr = 0.00005
+    lr = 0.0001
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
     method_name = "1" if method.value == "current_frame" else "2"
@@ -248,7 +250,7 @@ if __name__ == '__main__':
     elif dataset_name == "humanml":
         motion_loader = AMASSMotionLoader(fps=20, base_dir="datasets/motions/AMASS_20.0_fps_nh_smplrifke")
         train_dataset = TextMultiMotionDataset(name="humanml3d", text_encoder=None, motion_loader=motion_loader, split="train")
-        val_dataset = TextMultiMotionDataset(name="humanml3d", text_encoder=None, motion_loader=motion_loader, split="me/test")
+        val_dataset = TextMultiMotionDataset(name="humanml3d", text_encoder=None, motion_loader=motion_loader, split="val")
 
         train_loader = data.DataLoader(dataset=train_dataset, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=train_dataset.collate_fn)
         valid_loader = data.DataLoader(dataset=val_dataset, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=train_dataset.collate_fn)

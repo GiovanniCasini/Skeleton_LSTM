@@ -1,7 +1,6 @@
 datasets/*
 wandb/*
 checkpoints/*
-visualizations/*
 __pycache__/*
 .vscode/launch.json
 data/__pycache__/*
@@ -11,7 +10,6 @@ data/__pycache__/*
 .dotnet/*
 miniconda3/*
 .conda/*
-tesi/LSTM_skeleton/__pycache__/*
 .bash_history
 .bash_logout
 .bashrc
@@ -22,9 +20,6 @@ tesi/LSTM_skeleton/__pycache__/*
 checkpoint.pth
 Miniconda3-latest-Linux-x86_64.sh
 .vscode/launch.json
-tesi/LSTM_skeleton/checkpoints/*
-tesi/LSTM_skeleton/kit_numpy/*
-tesi/LSTM_skeleton/visualizations/*
-tesi/LSTM_skeleton/wandb/*
 wandb/*
 tools/__pycache__/*
+deps/*
