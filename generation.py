@@ -115,7 +115,7 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
 
         output = output[0]
         smplh = SMPLH(
-            path="deps/smplh",
+            path="/andromeda/personal/lmandelli/stmc/deps/smplh",
             jointstype="both",
             input_pose_rep="axisangle",
             gender="male",
