@@ -60,7 +60,7 @@ class PeriodicPositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class SkeletonFormer(nn.Module):
-    def __init__(self, device, hidden_size=32, feature_size=63, name="model_name", method=None):
+    def __init__(self, hidden_size=32, feature_size=63, name="model_name", method=None):
         super(SkeletonFormer, self).__init__()
         """
         audio: (batch_size, raw_wav)
@@ -131,8 +131,4 @@ class SkeletonFormer(nn.Module):
             new_output = self.motion_encoder(motion_frame)#.unsqueeze(1)
             motion_emb = torch.cat((motion_emb, new_output), 1)
 
-        #motion_out = motion_out + motion_frame
-
         return motion_out
-
-    
