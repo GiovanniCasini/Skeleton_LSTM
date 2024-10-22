@@ -23,3 +23,4 @@ Miniconda3-latest-Linux-x86_64.sh
 wandb/*
 tools/__pycache__/*
 deps/*
+visualizations/*
