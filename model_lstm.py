@@ -204,17 +204,18 @@ if __name__ == '__main__':
 
     criterion = rec_loss
     method = Method("current_frame")
-    dataset_name = "kitml" # "kitml" or "humanml"
+    dataset_name = "humanml" # "kitml" or "humanml"
 
     # Iperparametri
     hidden_size = 32
     num_epochs = 20
-    bs = 2
-    lr = 0.0001
+    bs = 1
+    lr = 0.00005
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
     method_name = "1" if method.value == "current_frame" else "2"
-    name = f"Loss{criterion_name}_method{method_name}_bs{bs}_K"
+    dataset_sigla = "K" if dataset_name == "kitml" else "H"
+    name = f"Loss{criterion_name}_method{method_name}_bs{bs}_dataset{dataset_sigla}_h{hidden_size}"
     feature_size = 63 if dataset_name == "kitml" else 205
 
     # Initialize wandb and log hyperparameters
@@ -224,6 +225,8 @@ if __name__ == '__main__':
         "learning_rate": lr,
         "epochs": num_epochs
     })
+
+    print(f"Start training - name: {name} - bs {bs} - lr {lr} - epochs {num_epochs} - hidden size {hidden_size}")
 
     # Inizializzazione del modello, della funzione di perdita e dell'ottimizzatore
     model = SkeletonLSTM(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)

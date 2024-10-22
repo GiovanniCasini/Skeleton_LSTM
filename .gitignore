@@ -27,3 +27,4 @@ tesi/LSTM_skeleton/kit_numpy/*
 tesi/LSTM_skeleton/visualizations/*
 tesi/LSTM_skeleton/wandb/*
 wandb/*
+tools/__pycache__/*
