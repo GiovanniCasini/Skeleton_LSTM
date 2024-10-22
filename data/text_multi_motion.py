@@ -29,7 +29,7 @@ class TextMultiMotionDataset(Dataset):
     ):
         if tiny:
             split = split + "_tiny"
-        path = f"datasets/annotations/{name}"
+        path = f"/andromeda/personal/lmandelli/stmc/datasets/annotations/{name}"
         self.collate_fn = collate_text_motion
         self.split = split
         self.keyids = read_split(path, split)
@@ -44,7 +44,7 @@ class TextMultiMotionDataset(Dataset):
         # Just for debugging
         # load_annotations(path)
         self.annotations = load_annotations(path, name="splits/me/annotations_test.json") 
-        self.timelines_path = f"datasets/annotations/{name}/splits/me/timelines/"
+        self.timelines_path = f"andromeda/personal/lmandelli/stmc/datasets/annotations/{name}/splits/me/timelines/"
 
         # filter annotations (min/max)
         # but not for the test set

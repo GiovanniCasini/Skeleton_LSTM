@@ -247,7 +247,7 @@ if __name__ == '__main__':
         valid_loader = dataset["valid"]
         test_loader = dataset["test"]
     elif dataset_name == "humanml":
-        motion_loader = AMASSMotionLoader(fps=20, base_dir="datasets/motions/AMASS_20.0_fps_nh_smplrifke")
+        motion_loader = AMASSMotionLoader(fps=20, base_dir="/andromeda/personal/lmandelli/stmc/datasets/motions/AMASS_20.0_fps_nh_smplrifke")
         train_dataset = TextMultiMotionDataset(name="humanml3d", text_encoder=None, motion_loader=motion_loader, split="train")
         val_dataset = TextMultiMotionDataset(name="humanml3d", text_encoder=None, motion_loader=motion_loader, split="val")
 
