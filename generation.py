@@ -4,6 +4,7 @@ import torch
 import os
 from visualize import *
 from compare_visualizations import *
+import torch.nn.functional as F
 
 from model_lstm import Method, SkeletonLSTM
 from tools.extract_joints import extract_joints
@@ -18,12 +19,13 @@ def T(x):
     else:
         return x.transpose(*np.arange(x.ndim - 1, -1, -1))
 
-def load_model(model_path, name):    
+def load_model(device, model_path, name):    
     # Carica il checkpoint
-    checkpoint = torch.load(model_path)
-    feature_size = checkpoint["model_state_dict"]["lin1.weight"].shape[-1]
+    checkpoint = torch.load(model_path, map_location=device)
+    feature_size = 63#checkpoint["model_state_dict"]["lin1.weight"].shape[-1]
     hidden_size = checkpoint["hidden_size"]
     method = Method("current_frame") if "method1" in name else (Method("output") if "method2" in name else 0)
+    #model = SkeletonLSTM(device, hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)  
     model = SkeletonFormer(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)  
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
@@ -34,11 +36,28 @@ def load_model(model_path, name):
 def load_input(idx, dataset="kitml"):
     if dataset == "kitml":
         testset_path = f"{os.getcwd()}/kit_numpy/test"
-        motion = torch.from_numpy(np.load(f"{testset_path}/{idx}_motion.npy"))
-        maxx, minn = 6675.25, -6442.60
-        motion = (motion - minn) / (maxx - minn)
+        motion = torch.from_numpy(np.load(f"{testset_path}/{idx}_motion.npy")).reshape(-1, 63)
+        #maxx, minn = 6675.25, -6442.60
+        std, mean = 790.71, 357.44
+        motion = (motion - mean) / (std)
         motion = torch.stack([motion])
-        motion = motion.flatten(2, 3)
+        length = motion.shape[0]
+        '''
+        if length < 200:
+            # Upsample using interpolation (nearest, linear, bilinear, etc.)
+            normalized_motion = normalized_motion.transpose(1, 2)
+            normalized_motion = F.interpolate(
+                normalized_motion,  # Add a batch dimension
+                size=(200),
+                mode='linear',  # You can change the mode based on your needs
+                align_corners=False
+            ).transpose(1, 2)  # Remove the batch dimension
+        elif length > 200:
+            # Downsample using uniform sampling
+            indices = torch.linspace(0, length - 1, steps=200).long()
+            normalized_motion = normalized_motion[indices]
+        #motion = motion.flatten(2, 3)
+        '''
         motion = motion.to(device)
         text_file = f"{testset_path}/{idx}_text.txt"
         length_file = f"{testset_path}/{idx}_length.txt"
@@ -70,8 +89,8 @@ def load_input(idx, dataset="kitml"):
 def generate_output(model, motion, text, length):
     # Genera l'output dal modello
     with torch.no_grad():
-        output = model(motion, text)
-
+        output = model.predict_new(motion, text)
+        #output = model(motion, text)
     return output
 
 def save_output(output, id):
@@ -81,8 +100,10 @@ def save_output(output, id):
 
 def normalize_output(output, dataset):
     if dataset=="kitml":
-        maxx, minn = 6675.25, -6442.60
-        output = minn + output * (maxx - minn)
+        #maxx, minn = 6675.25, -6442.60
+        #output = minn + output * (maxx - minn)
+        std, mean = 790.71, 357.44
+        output = (output * std) + mean
         output = output.view(1, -1, 21, 3)
         output = output.squeeze(0)
         output = output.cpu()
@@ -95,7 +116,7 @@ def normalize_output(output, dataset):
 
 def generate(model_path, id, name, dataset, y_is_z_axis=False, connections=True):
 
-    model = load_model(model_path, name=name)
+    model = load_model(device, model_path, name=name)
     model.to(device)
 
     motion, text, length = load_input(id, dataset=dataset)
@@ -138,10 +159,12 @@ def generate(model_path, id, name, dataset, y_is_z_axis=False, connections=True)
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    name = "LossRec_method1_bs1_datasetH_h32"
+    #name = "New_Dataset_ModelAutoregressive_FinalSkeletonFormer_LossRec_datasetK_method1_bs1_h32"
+    #name = "New_Dataset_ModelTF_FinalSkeletonFormer_LossRec_datasetK_method1_bs1_h64"
+    name = "New_Dataset_ModelTF_No_Displacements_FinalSkeletonFormer_LossRec_datasetK_method1_bs1_h64"
     model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
     dataset = "humanml3d" if "H" in name else "kitml"
-    test_id = "000000" if dataset=="humanml3d" else "03902"
+    test_id = "000000" if dataset=="humanml3d" else "00003"
     y_is_z_axis = True if dataset=="humanml3d" else False
 
     generate(model_path=model_path, id=test_id, name=name, dataset=dataset, y_is_z_axis=y_is_z_axis)
