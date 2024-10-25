@@ -43,8 +43,7 @@ class TextMultiMotionDataset(Dataset):
         # remove too short or too long annotations
         # Just for debugging
         # load_annotations(path)
-        self.annotations = load_annotations(path, name="splits/me/annotations_test.json") 
-        self.timelines_path = f"andromeda/personal/lmandelli/stmc/datasets/annotations/{name}/splits/me/timelines/"
+        self.annotations = load_annotations(path, name="annotations.json") 
 
         # filter annotations (min/max)
         # but not for the test set
