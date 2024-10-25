@@ -19,7 +19,7 @@ def T(x):
 
 def load_model(model_class, model_path, name, feature_size=63):    
     # Carica il checkpoint
-    checkpoint = torch.load(model_path)
+    checkpoint = torch.load(model_path, map_location=device)
     feature_size = feature_size
     hidden_size = checkpoint["hidden_size"]
     method = Method("current_frame") if "method1" in name else (Method("output") if "method2" in name else 0)
@@ -52,14 +52,14 @@ def load_input(idx, dataset="kitml"):
         
     else:
         fps = 20
-        annotations = json.load(open(f"datasets/annotations/humanml3d/annotations.json"))
+        annotations = json.load(open(f"/andromeda/personal/lmandelli/stmc/datasets/annotations/humanml3d/annotations.json"))
         text = annotations[idx]["annotations"][0]["text"]
         length_s = annotations[idx]["annotations"][0]["end"] - annotations[idx]["annotations"][0]["start"]
         length = int(fps * float(length_s))
         path = annotations[idx]["path"]
         start = int(annotations[idx.strip()]["annotations"][0]["start"]*fps)
         end = int(annotations[idx.strip()]["annotations"][0]["end"]*fps)
-        full_motion = np.load(f"{os.getcwd()}/datasets/motions/AMASS_20.0_fps_nh_smplrifke/{path}.npy")
+        full_motion = np.load(f"/andromeda/personal/lmandelli/stmc/datasets/motions/AMASS_20.0_fps_nh_smplrifke/{path}.npy")
         motion = full_motion[start:end] 
         motion = torch.from_numpy(motion.reshape(1, motion.shape[0], motion.shape[1])).to(device=device).float()
 
@@ -139,12 +139,12 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    name = "ModelSkeletonFormer_LossRec_datasetH_method1_bs1_h4"
+    name = "ModelSkeletonFormer_LossRec_datasetH_method1_bs64_h32"
 
     model_class = SkeletonFormer if "SkeletonFormer" in name else SkeletonLSTM
     model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
     dataset = "humanml3d" if "H" in name else "kitml"
-    test_id = "000000" if dataset=="humanml3d" else "00002"
+    test_id = "000002" if dataset=="humanml3d" else "00002"
     y_is_z_axis = True if dataset=="humanml3d" else False
     feature_size = 205 if dataset=="humanml3d" else 63 
 

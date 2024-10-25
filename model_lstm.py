@@ -200,12 +200,12 @@ if __name__ == '__main__':
     criterion = rec_loss
     method = Method("current_frame")
     dataset_name = "humanml" # "kitml" or "humanml"
-    model_class = SkeletonFormer # SkeletonFormer or SkeletonLSTM
+    model_class = SkeletonLSTM # SkeletonFormer or SkeletonLSTM
 
     # Iperparametri
-    hidden_size = 16
-    num_epochs = 20
-    bs = 1
+    hidden_size = 32
+    num_epochs = 50
+    bs = 64
     lr = 0.0001
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"

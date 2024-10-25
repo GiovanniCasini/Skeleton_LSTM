@@ -56,9 +56,10 @@ def numpy_to_video(np_data, save_path, connections=True, body_connections="kitml
         
         for i in range(num_joints):
             ax.text(np_data[num_frame,i,0], np_data[num_frame,i,1], np_data[num_frame,i,2], str(i))
+    
+        if text is not None:
+            ax.text(x=0.5, y=1.05, z=0, s=text, transform=ax.transAxes, ha='center')
 
-    if text is not None:
-        ax.text(x=0.5, y=1.05, z=0, s= text, transform=ax.transAxes, ha='center')
     # Crea l'animazione utilizzando le funzioni di inizializzazione e aggiornamento
     ani = animation.FuncAnimation(fig, update, frames=range(num_frames), init_func=init, blit=False)
 
