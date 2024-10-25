@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 import os
+from kit_dataloader import Dataset
 
 kitml_body_connections = [(0,1),(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(4,8),(8,9),(9,10),(0,11),(0,16),(11,12),(12,13),(13,14),(14,15),(16,17),(17,18),(18,19),(19,20)] 
 
@@ -67,7 +68,7 @@ def numpy_to_video(np_data, save_path, connections=True, body_connections="kitml
 
     plt.show()
 
-    # Salva l'animazione come file mp4, bisogna avere ffmepg installato
+    # Salva l'animazione come file mp4, bisogna avere ffmpeg installato
     print(f"Saving video in {save_path}")
     ani.save(save_path, writer='ffmpeg')
     print("Done")
@@ -75,25 +76,26 @@ def numpy_to_video(np_data, save_path, connections=True, body_connections="kitml
 
 def main():
 
-    id = "01423"
+    id = "01260"
 
-    input_dir = os.path.join(os.getcwd(), 'kit_numpy', 'test')
-    output_dir = os.path.join(os.getcwd(), 'visualizations', id)
+    data_path = os.path.join(os.getcwd(), 'kit_numpy', 'test')
+    dataset = Dataset(path=data_path, target_length=100)
+    
+    file_name = f"{id}_motion.npy"
+    motion_file_path = os.path.join(data_path, file_name)
+    
+    index = dataset.motions.index(motion_file_path)
+    item = dataset[index]
+    resampled_motion = item['x'].numpy()
+    action_text = item['text']
 
-    motion_file_path = os.path.join(input_dir, f"{id}_motion.npy")
-    text_file_path = os.path.join(input_dir, f"{id}_text.txt")
-    save_path = os.path.join(output_dir, f"{id}_motion.mp4")
+    save_dir = os.path.join(os.getcwd(), 'visualizations', id)
+    save_path = os.path.join(save_dir, f"{id}_resampled_motion.mp4")
 
-    np_data = np.load(motion_file_path)
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
 
-    with open(text_file_path, 'r') as f:
-        action_text = f.read()
-
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    numpy_to_video(np_data, save_path, text=action_text)
-
+    numpy_to_video(np_data=resampled_motion, save_path=save_path, text=action_text)
 
 
 if __name__ == "__main__":

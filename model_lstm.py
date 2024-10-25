@@ -15,7 +15,6 @@ from data.text_multi_motion import TextMultiMotionDataset
 from torch.utils import data
 from model_transformer import *
 
-
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class Method(enum.Enum):
@@ -123,13 +122,11 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
                 outputs = model(motions[:,:k], texts)
                 loss = criterion(outputs, motions[:,:k])
                 loss.backward()
-                #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
                 optimizer.step()
             '''
             outputs = model(motions, texts)
             loss = criterion(outputs, motions)
             loss.backward()
-            #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
             optimizer.step()
 
             running_loss += loss.item()
@@ -200,18 +197,19 @@ if __name__ == '__main__':
     criterion = rec_loss
     method = Method("current_frame")
     dataset_name = "humanml" # "kitml" or "humanml"
-    model_class = SkeletonLSTM # SkeletonFormer or SkeletonLSTM
+    model_class = SkeletonFormer # SkeletonFormer or SkeletonLSTM
+    extra_text = ""
 
     # Iperparametri
-    hidden_size = 32
-    num_epochs = 50
-    bs = 64
+    hidden_size = 64
+    num_epochs = 100
+    bs = 32
     lr = 0.0001
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
     method_name = "1" if method.value == "current_frame" else "2"
-    dataset_sigla = "K" if dataset_name == "kitml" else "H"
-    name = f"Model{model_class.__name__}_Loss{criterion_name}_dataset{dataset_sigla}_method{method_name}_bs{bs}_h{hidden_size}"
+    dataset_sigla = "KitML" if dataset_name == "kitml" else "HumML"
+    name = f"{model_class.__name__}_Loss{criterion_name}_{dataset_sigla}_m{method_name}_bs{bs}_h{hidden_size}_{extra_text}"
     feature_size = 63 if dataset_name == "kitml" else 205
 
     print(f"name: {name}")

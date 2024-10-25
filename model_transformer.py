@@ -125,7 +125,7 @@ class SkeletonFormer(nn.Module):
                 motion_input = self.PPE(motion_emb)
             tgt_mask = self.biased_mask[:, :motion_input.shape[1], :motion_input.shape[1]].clone().detach().to(device=self.device)
             memory_mask = enc_dec_mask(self.device, motion_input.shape[1], text_embedding.shape[1])
-            motion_out = self.transformer_decoder(motion_input, text_embedding)# , tgt_mask=tgt_mask, memory_mask=memory_mask)
+            motion_out = self.transformer_decoder(motion_input, text_embedding)
             motion_out = self.metion_decoder(motion_out) + motion_frame
             motion_frame = motion_out[:,-1,:].unsqueeze(1)
             new_output = self.motion_encoder(motion_frame)#.unsqueeze(1)

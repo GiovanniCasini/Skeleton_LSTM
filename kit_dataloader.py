@@ -1,3 +1,18 @@
+import logging
+import warnings
+
+# Suppress warnings from the transformers library
+logging.getLogger("transformers.modeling_utils").setLevel(logging.ERROR)
+
+warnings.filterwarnings(
+    "ignore",
+    message="A parameter name that contains `gamma` will be renamed internally to `weight`.*"
+)
+warnings.filterwarnings(
+    "ignore",
+    message="A parameter name that contains `beta` will be renamed internally to `bias`.*"
+)
+
 import os
 import torch
 from collections import defaultdict
@@ -11,42 +26,54 @@ import matplotlib.pyplot as plt
 class Dataset(data.Dataset):
     """Custom data.Dataset compatible with data.DataLoader."""
 
-    def __init__(self, path):
+    def __init__(self, path, target_length=100):
 
         self.path = path
-        samples = {}
+        self.target_length = target_length
         self.motions = []
         self.lengths = []
         self.texts = []
         motions = glob.glob(os.path.join(path, "*motion.npy"))
         for m in motions: 
-            length_path = m.replace("motion", "length").replace("npy", "txt")
-            with open(length_path, 'r') as f:
-                length = int(f.read().strip())
-            # Filtra le sequenze con lunghezza <= 120
-            if length <= 2000:
-                self.motions.append(m)
-                self.lengths.append(length_path)
-                self.texts.append(m.replace("motion", "text").replace("npy", "txt"))
+            self.motions.append(m)
+            self.lengths.append(m.replace("motion", "length").replace("npy", "txt"))
+            self.texts.append(m.replace("motion", "text").replace("npy", "txt"))
             
         self.len = len(self.motions)
         self.maxx, self.minn = 6675.25, -6442.60 # tutti gli elementi
-        #self.maxx, self.minn = 5912.18, -4839.69 # elementi lunghi < 120
 
     def __getitem__(self, index):
-        motion = torch.from_numpy(np.load(self.motions[index]))
+        motion = np.load(self.motions[index])
         normalized_motion = (motion - self.minn) / (self.maxx - self.minn)
-        length = motion.shape[0]
+        resampled_motion = self.resample_motion(normalized_motion, self.target_length)
+        length = resampled_motion.shape[0]
+
         with open(self.texts[index], 'r') as f:
             text = f.read()
 
-        return {'x': normalized_motion,
-                'length': length,
-                'text': text
-                }
+        return {
+            'x': torch.from_numpy(resampled_motion.astype(np.float32)),
+            'length': length,
+            'text': text
+        }
 
     def __len__(self):
         return self.len
+    
+    @staticmethod
+    def resample_motion(motion, target_length):
+        original_length = motion.shape[0]
+        if original_length == target_length:
+            return motion
+
+        original_indices = np.linspace(0, original_length - 1, num=original_length)
+        target_indices = np.linspace(0, original_length - 1, num=target_length)
+
+        resampled_motion = np.zeros((target_length, motion.shape[1], motion.shape[2]))
+        for i in range(motion.shape[1]):
+            for j in range(motion.shape[2]):
+                resampled_motion[:, i, j] = np.interp(target_indices, original_indices, motion[:, i, j])
+        return resampled_motion
 
 def collate_fn(batch):
     max_length = max([item['length'] for item in batch])
@@ -96,7 +123,7 @@ def compute_global_max_min(paths):
                     min_value = current_min
             else:
                 filtered_sequences += 1
-        print(f"Dataset '{path}': totale sequenze = {total_sequences}, sequenze filtrate = {filtered_sequences}")
+        #print(f"Dataset '{path}': totale sequenze = {total_sequences}, sequenze filtrate = {filtered_sequences}")
     return max_value, min_value
 
 def get_dataloaders(args, bs=1):
@@ -117,11 +144,17 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
+    dataloaders = get_dataloaders(args, bs=1)
+    for batch in dataloaders["valid"]:
+        print(batch["x"].shape)  # Should output: torch.Size([8, 100, 63])
+
+    
+    '''
     # Calcolo max e min globali
     dataset_paths = [args.path_train, args.path_val, args.path_test]
     maxx, minn = compute_global_max_min(dataset_paths)
     print(f"Max globale: {maxx}, Min globale: {minn}")
-    '''
+
     # Plot delle lunghezze
     train_data = Dataset(args.path_train)
     valid_data = Dataset(args.path_val)
