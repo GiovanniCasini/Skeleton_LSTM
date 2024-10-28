@@ -13,7 +13,7 @@ from data.text import TextEmbeddings
 from data.text_multi_motion import TextMultiMotionDataset
 from torch.utils import data
 from model_transformer import *
-from losses import robust_loss
+# from losses import robust_loss
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -210,7 +210,7 @@ if __name__ == '__main__':
 
     criterion = rec_loss
     method = Method("current_frame")
-    dataset_name = "kitml" # "kitml" or "humanml"
+    dataset_name = "humanml" # "kitml" or "humanml"
     model_class = SkeletonFormer # SkeletonFormer or SkeletonLSTM
 
     # Iperparametri
