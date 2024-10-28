@@ -134,7 +134,7 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
             motions = batch["x"].to(device)
             texts =  batch["text"]
             
-            #motions = motions[:, 1:, :] - motions[:, :-1, :]
+            motions = motions[:, 1:, :] - motions[:, :-1, :]
 
             outputs = model(motions, texts)
             loss = criterion(outputs[:, :-1, :], motions[:, 1:, :])
@@ -157,7 +157,7 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
                     motions = batch["x"].to(device)
                     texts =  batch["text"]
                     
-                    #motions = motions[:, 1:, :] - motions[:, :-1, :]
+                    motions = motions[:, 1:, :] - motions[:, :-1, :]
 
                     outputs = model(motions, texts)
 
