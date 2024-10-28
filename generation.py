@@ -4,6 +4,7 @@ import torch
 import os
 from visualize import *
 from compare_visualizations import *
+import torch.nn.functional as F
 
 from model_lstm import Method, SkeletonLSTM
 from tools.extract_joints import extract_joints
@@ -33,16 +34,14 @@ def load_model(model_class, model_path, name, feature_size=63):
 def load_input(idx, dataset="kitml", target_length=100):
     if dataset == "kitml":
         testset_path = f"{os.getcwd()}/kit_numpy/test"
-        motion = np.load(f"{testset_path}/{idx}_motion.npy")  # Shape: (original_length, 21, 3)
-        maxx, minn = 6675.25, -6442.60
-        motion = (motion - minn) / (maxx - minn)  # Normalize
-        original_length = motion.shape[0]
-        
-        # Resample the motion to target_length frames
-        motion = resample_motion(motion.reshape(original_length, -1), target_length=target_length)  # Shape: (100, 63)
-        motion = torch.from_numpy(motion).unsqueeze(0)  # Shape: (1, 100, 63)
-        motion = motion.to(device).float()
-
+        motion = torch.from_numpy(np.load(f"{testset_path}/{idx}_motion.npy")).reshape(-1, 63)
+        #maxx, minn = 6675.25, -6442.60
+        std, mean = 790.71, 357.44
+        motion = (motion - mean) / (std)
+        motion = torch.stack([motion])
+        length = motion.shape[0]
+       
+        motion = motion.to(device)
         text_file = f"{testset_path}/{idx}_text.txt"
         length_file = f"{testset_path}/{idx}_length.txt"
 
@@ -77,8 +76,8 @@ def load_input(idx, dataset="kitml", target_length=100):
 def generate_output(model, motion, text, length):
     # Genera l'output dal modello
     with torch.no_grad():
-        output = model(motion, text)
-
+        output = model.predict(motion, text)
+        #output = model(motion, text)
     return output
 
 def save_output(output, id):
@@ -88,8 +87,10 @@ def save_output(output, id):
 
 def normalize_output(output, dataset):
     if dataset=="kitml":
-        maxx, minn = 6675.25, -6442.60
-        output = minn + output * (maxx - minn)
+        #maxx, minn = 6675.25, -6442.60
+        #output = minn + output * (maxx - minn)
+        std, mean = 790.71, 357.44
+        output = (output * std) + mean
         output = output.view(1, -1, 21, 3)
         output = output.squeeze(0)
         output = output.cpu()
@@ -108,19 +109,7 @@ def resample_motion(motion, target_length=100):
     original_indices = np.linspace(0, original_length - 1, num=original_length, dtype=np.float32)
     target_indices = np.linspace(0, original_length - 1, num=target_length, dtype=np.float32)
 
-    # Initialize the resampled motion array
-    resampled_motion = np.zeros((target_length, feature_size), dtype=np.float32)
-
-    # Perform linear interpolation for each feature
-    for i in range(feature_size):
-        resampled_motion[:, i] = np.interp(target_indices, original_indices, motion[:, i])
-
-    return resampled_motion
-
-
-def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_axis=False, connections=True):
-
-    model = load_model(model_class=model_class, feature_size=feature_size, model_path=model_path, name=name)
+    model = load_model(device, model_path, name=name)
     model.to(device)
 
     motion, text, length = load_input(id, dataset=dataset)
@@ -134,7 +123,7 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
     if output.shape[-1] != 205:
         testset_path = f"{os.getcwd()}/kit_numpy/test"
         # np_data1 = np.load(f"{testset_path}/{id}_motion.npy")
-        numpy_to_video(output, save_path, connections=connections, text=text)
+        numpy_to_video(output, save_path, text=text)
 
     elif output.shape[-1] == 205:
         from tools.smpl_layer import SMPLH
@@ -161,7 +150,7 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
             x, mz, my = T(joints)
             joints = T(np.stack((x, my, mz), axis=0))
 
-        numpy_to_video(joints, save_path, connections=connections, body_connections="guoh3djoints", text=text) 
+        numpy_to_video(joints, save_path, body_connections="guoh3djoints", text=text) 
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
