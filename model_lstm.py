@@ -181,9 +181,9 @@ if __name__ == '__main__':
     extra_text = ""
 
     # Iperparametri
-    hidden_size = 64
+    hidden_size = 128
     num_epochs = 400
-    bs = 1024
+    bs = 256
     lr = 0.0001
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
@@ -199,9 +199,7 @@ if __name__ == '__main__':
     print(f"Start training - name: {name} - bs {bs} - lr {lr} - epochs {num_epochs} - hidden size {hidden_size}")
 
     # Inizializzazione del modello, della funzione di perdita e dell'ottimizzatore
-    #model = SkeletonLSTM(device, hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)
-    model = SkeletonFormer(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)
-    #model = model_class(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)
+    model = model_class(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     print(f"Num parameters: {count_parameters(model)}")
@@ -227,6 +225,5 @@ if __name__ == '__main__':
 
         train_loader = data.DataLoader(dataset=train_dataset, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=train_dataset.collate_fn)
         valid_loader = data.DataLoader(dataset=val_dataset, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=train_dataset.collate_fn)
-
 
     train(model, train_loader, valid_loader, criterion, optimizer, num_epochs)

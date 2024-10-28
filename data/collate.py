@@ -4,16 +4,6 @@ from typing import List, Dict, Optional
 from torch import Tensor
 from torch.utils.data import default_collate
 
-## MYCODE
-def collate_x_dict(lst_x_dict: List, *, device: Optional[str] = None) -> Dict:
-    x = collate_tensor_with_padding([x_dict["x"] for x_dict in lst_x_dict])
-    if device is not None:
-        x = x.to(device)
-    length = [x_dict["length"] for x_dict in lst_x_dict]
-    mask = length_to_mask(length, device=x.device)
-    batch = {"x": x, "length": length, "mask": mask}
-    return batch
-
 
 def length_to_mask(length, device: torch.device = None) -> Tensor:
     if device is None:
@@ -71,8 +61,5 @@ def collate_text_motion(lst_elements: List, *, device: Optional[str] = None) -> 
     if "tx_uncond" in keys:
         # only one is enough
         batch["tx_uncond"] = one_el["tx_uncond"]
-
-    if "submotions" in keys:
-        batch["submotions"] = [x["submotions"] for x in lst_elements]
     
     return batch

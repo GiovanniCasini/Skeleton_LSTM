@@ -125,7 +125,7 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
             gender="male",
         )
         output_ = extract_joints(
-                output,
+                output, # motion.squeeze().cpu(), # output
                 "smplrifke",
                 fps=20,
                 value_from="smpl",
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     model_class = SkeletonFormer if "SkeletonFormer" in name else SkeletonLSTM
     model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
     dataset = "humanml3d" if "HumML" in name else "kitml"
-    test_id = "000019" if dataset=="humanml3d" else "00029"
+    test_id = "000015" if dataset=="humanml3d" else "00029"
     y_is_z_axis = True if dataset=="humanml3d" else False
     feature_size = 205 if dataset=="humanml3d" else 63 
 

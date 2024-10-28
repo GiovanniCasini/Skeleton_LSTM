@@ -167,5 +167,3 @@ class SkeletonFormer(nn.Module):
         outputs = torch.stack(outputs, dim=1).squeeze(2)
         
         return outputs
-    
-    
