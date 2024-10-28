@@ -181,9 +181,9 @@ if __name__ == '__main__':
     extra_text = ""
 
     # Iperparametri
-    hidden_size = 128
+    hidden_size = 64
     num_epochs = 400
-    bs = 256
+    bs = 128
     lr = 0.0001
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
