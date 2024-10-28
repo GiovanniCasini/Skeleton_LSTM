@@ -164,7 +164,7 @@ class SkeletonFormer(nn.Module):
             new_output = self.motion_encoder(motion_disp)#.unsqueeze(1)
             motion_emb = torch.cat((motion_emb, new_output), 1)
 
-        outputs = torch.stack(outputs, dim=1)
+        outputs = torch.stack(outputs, dim=1).squeeze(2)
         
         return outputs
     

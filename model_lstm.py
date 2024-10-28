@@ -134,6 +134,7 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
 
                     running_loss += loss.item()
                     pbar.set_description("Epoch {} Valid Loss {:.7f}".format((e+1), running_loss/(batch_id+1)))
+                    wandb.log({"val_loss": running_loss/(batch_id+1), "epoch": e+1})
 
                 avg_loss = running_loss/(batch_id+1)
                 if avg_loss < valid_loss:
@@ -182,7 +183,7 @@ if __name__ == '__main__':
     # Iperparametri
     hidden_size = 64
     num_epochs = 400
-    bs = 1
+    bs = 1024
     lr = 0.0001
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
@@ -192,6 +193,8 @@ if __name__ == '__main__':
     feature_size = 63 if dataset_name == "kitml" else 205
 
     print(f"name: {name}")
+
+    wandb.init(project="Skeleton_LSTM", name=name)
 
     print(f"Start training - name: {name} - bs {bs} - lr {lr} - epochs {num_epochs} - hidden size {hidden_size}")
 

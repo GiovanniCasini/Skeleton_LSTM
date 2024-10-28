@@ -2,6 +2,7 @@ import json
 import numpy as np
 import torch
 import os
+from tools.smpl_layer import SMPLH
 from visualize import *
 from compare_visualizations import *
 import torch.nn.functional as F
@@ -59,18 +60,13 @@ def load_input(idx, dataset="kitml", target_length=100):
         length_s = annotations[idx]["annotations"][0]["end"] - annotations[idx]["annotations"][0]["start"]
         length = int(fps * float(length_s))
         path = annotations[idx]["path"]
-        start = int(annotations[idx]["annotations"][0]["start"] * fps)
-        end = int(annotations[idx]["annotations"][0]["end"] * fps)
-        full_motion = np.load(f"{os.getcwd()}/datasets/motions/AMASS_20.0_fps_nh_smplrifke/{path}.npy")
-        motion = full_motion[start:end]  # Shape: (original_length, feature_size)
-        
-        # Resample the motion to target_length frames
-        motion = resample_motion(motion, target_length=target_length)  # Shape: (100, feature_size)
-        motion = torch.from_numpy(motion).unsqueeze(0).to(device=device).float()  # Shape: (1, 100, feature_size)
-        length = target_length
+        start = int(annotations[idx.strip()]["annotations"][0]["start"]*fps)
+        end = int(annotations[idx.strip()]["annotations"][0]["end"]*fps)
+        full_motion = np.load(f"/andromeda/personal/lmandelli/stmc/datasets/motions/AMASS_20.0_fps_nh_smplrifke/{path}.npy")
+        motion = full_motion[start:end] 
+        motion = torch.from_numpy(motion.reshape(1, motion.shape[0], motion.shape[1])).to(device=device).float()
 
     return motion, text, length
-
 
    
 def generate_output(model, motion, text, length):
@@ -79,6 +75,7 @@ def generate_output(model, motion, text, length):
         output = model.predict(motion, text)
         #output = model(motion, text)
     return output
+
 
 def save_output(output, id):
     """Salva l'output come file {id}.npy"""
@@ -100,16 +97,10 @@ def normalize_output(output, dataset):
 
     return output
 
-def resample_motion(motion, target_length=100):
-    original_length, feature_size = motion.shape
-    if original_length == target_length:
-        return motion.astype(np.float32)
 
-    # Original and target time steps
-    original_indices = np.linspace(0, original_length - 1, num=original_length, dtype=np.float32)
-    target_indices = np.linspace(0, original_length - 1, num=target_length, dtype=np.float32)
+def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_axis=False, connections=True):
 
-    model = load_model(device, model_path, name=name)
+    model = load_model(model_class=model_class, model_path=model_path, name=name, feature_size=feature_size)
     model.to(device)
 
     motion, text, length = load_input(id, dataset=dataset)
@@ -119,15 +110,13 @@ def resample_motion(motion, target_length=100):
 
     output = normalize_output(output=output, dataset=dataset)
     
-    save_path = f"{os.getcwd()}/visualizations/{id}/{name}_id{id}.mp4"
+    save_path = f"{os.getcwd()}/visualizations/{name}_id{id}.mp4"
     if output.shape[-1] != 205:
         testset_path = f"{os.getcwd()}/kit_numpy/test"
         # np_data1 = np.load(f"{testset_path}/{id}_motion.npy")
-        numpy_to_video(output, save_path, text=text)
+        numpy_to_video(output, save_path, connections=connections, text=text)
 
     elif output.shape[-1] == 205:
-        from tools.smpl_layer import SMPLH
-
         output = output[0]
         smplh = SMPLH(
             path="/andromeda/personal/lmandelli/stmc/deps/smplh",
@@ -150,16 +139,17 @@ def resample_motion(motion, target_length=100):
             x, mz, my = T(joints)
             joints = T(np.stack((x, my, mz), axis=0))
 
-        numpy_to_video(joints, save_path, body_connections="guoh3djoints", text=text) 
+        numpy_to_video(joints, save_path, connections=connections, body_connections="guoh3djoints", text=text) 
+
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    name = "SkeletonLSTM_LossRec_KitML_m1_bs1_h32_"
+    name = "SkeletonFormer_LossRec_HumML_m1_bs512_h64_"
 
     model_class = SkeletonFormer if "SkeletonFormer" in name else SkeletonLSTM
     model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
     dataset = "humanml3d" if "HumML" in name else "kitml"
-    test_id = "000000" if dataset=="humanml3d" else "00029"
+    test_id = "000019" if dataset=="humanml3d" else "00029"
     y_is_z_axis = True if dataset=="humanml3d" else False
     feature_size = 205 if dataset=="humanml3d" else 63 
 
