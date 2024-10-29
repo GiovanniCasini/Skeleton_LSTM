@@ -89,14 +89,11 @@ class SkeletonFormer(nn.Module):
         decoder_layer = nn.TransformerDecoderLayer(d_model=self.hidden_size, nhead=4, dim_feedforward=2*self.hidden_size, batch_first=True)        
         self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=1)
 
-        encoder_layer = nn.TransformerEncoderLayer(d_model=self.hidden_size, nhead=4, dim_feedforward=2*self.hidden_size, batch_first=True)        
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
-
         # motion decoder
-        self.metion_decoder = nn.Linear(self.hidden_size, self.feature_size)
+        self.motion_decoder = nn.Linear(self.hidden_size, self.feature_size)
 
-        nn.init.constant_(self.metion_decoder.weight, 0)
-        nn.init.constant_(self.metion_decoder.bias, 0)
+        nn.init.constant_(self.motion_decoder.weight, 0)
+        nn.init.constant_(self.motion_decoder.bias, 0)
 
         self.save_path = f"{os.getcwd()}/checkpoints/{name}.ckpt" 
 
@@ -116,7 +113,7 @@ class SkeletonFormer(nn.Module):
         tgt_mask = self.biased_mask[:, :motions.shape[1], :motions.shape[1]].clone().detach().to(device=self.device).unsqueeze(0).expand(batch_size, 4, seq_length, seq_length).reshape(batch_size*4, seq_length, seq_length) 
         memory_mask = enc_dec_mask(self.device, motions.shape[1], text_embedding.shape[1])
         motion_out = self.transformer_decoder(motions_emb, text_embedding, tgt_mask=tgt_mask, memory_mask=memory_mask)
-        outputs = self.metion_decoder(motion_out)# + motions[:, 0, :].unsqueeze(1)
+        outputs = self.motion_decoder(motion_out)# + motions[:, 0, :].unsqueeze(1)
             
         return outputs
     
@@ -144,7 +141,7 @@ class SkeletonFormer(nn.Module):
             tgt_mask = self.biased_mask[:, :motion_input.shape[1], :motion_input.shape[1]].clone().detach().to(device=self.device)
             memory_mask = enc_dec_mask(self.device, motion_input.shape[1], text_embedding.shape[1])
             motion_out = self.transformer_decoder(motion_input, text_embedding, tgt_mask=tgt_mask, memory_mask=memory_mask)
-            motion_out = self.metion_decoder(motion_out) #+ motion_frame_
+            motion_out = self.motion_decoder(motion_out) #+ motion_frame_
             motion_disp = motion_out[:,-1,:].unsqueeze(1)
             motion_frame = motion_disp + motion_frame
             outputs.append(motion_frame)

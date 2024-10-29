@@ -1,8 +1,5 @@
-from sympy import im
 import torch
 import torch.nn as nn
-from transformers import BertTokenizer, BertModel
-import torch.nn.functional as F
 import torch.optim as optim
 import argparse
 from tqdm import tqdm
@@ -14,7 +11,8 @@ from data.text_multi_motion import TextMultiMotionDataset
 from torch.utils import data
 from model_transformer import *
 import wandb
-from text_encoder import Bert, Bart, CLIP
+from text_encoder import *
+
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

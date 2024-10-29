@@ -1,16 +1,7 @@
-import torch
 import torch.nn as nn
-from transformers import BertTokenizer, BertModel
-import torch.nn.functional as F
-import torch.optim as optim
-import argparse
-from tqdm import tqdm
 from kit_dataloader import get_dataloaders
 import os
 import enum
-from data.motion import AMASSMotionLoader
-from data.text_multi_motion import TextMultiMotionDataset
-from torch.utils import data
 from model_transformer import *
 import wandb
 
@@ -20,7 +11,7 @@ class Method(enum.Enum):
     method_2 = 'output'
 
 class SkeletonLSTM(nn.Module):
-    def __init__(self, device, method: Method=None, hidden_size=32, feature_size=63, name="model_name"):
+    def __init__(self, device, text_encoder, method: Method=None, hidden_size=32, feature_size=63, name="model_name"):
         super(SkeletonLSTM, self).__init__()
 
         self.method = method
@@ -30,8 +21,7 @@ class SkeletonLSTM(nn.Module):
         self.device = device
 
         # BERT
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
-        self.text_encoder = BertModel.from_pretrained('bert-base-cased')
+        self.text_encoder = text_encoder
         for param in self.text_encoder.parameters():
             param.requires_grad = False
         self.lin_text = nn.Linear(768, self.hidden_size)
@@ -61,11 +51,7 @@ class SkeletonLSTM(nn.Module):
     def forward(self, motions, texts):
         batch_size, seq_length, _ = motions.shape
 
-        # Embedding del testo BERT
-        text_tokens = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True).to(device)
-        input_ids = text_tokens.input_ids
-        mask = text_tokens.attention_mask
-        last_hidden_state, text_embedding = self.text_encoder(input_ids=input_ids, attention_mask=mask,return_dict=False) # (bs, 768)
+        text_embedding = self.text_encoder(texts) # (bs, 768)
         text_embedding = self.lin_text(text_embedding).unsqueeze(1)#.expand(batch_size, seq_length, self.hidden_size) # (bs, hideen_size/2)
 
         motion_frame = motions[:, 0, :] # primo frame (bs, 63)
