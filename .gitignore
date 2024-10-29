@@ -25,3 +25,4 @@ tools/__pycache__/*
 deps/*
 visualizations/*
 .vscode/*
+outputs/*
