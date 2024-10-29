@@ -6,8 +6,6 @@ import numpy as np
 import copy
 import math
 
-from transformers import BertTokenizer, BertModel
-
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Temporal Bias, inspired by ALiBi: https://github.com/ofirpress/attention_with_linear_biases
@@ -60,7 +58,7 @@ class PeriodicPositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class SkeletonFormer(nn.Module):
-    def __init__(self, hidden_size=32, feature_size=63, name="model_name", method=None):
+    def __init__(self, text_encoder, hidden_size=32, feature_size=63, name="model_name", method=None):
         super(SkeletonFormer, self).__init__()
         """
         audio: (batch_size, raw_wav)
@@ -74,12 +72,10 @@ class SkeletonFormer(nn.Module):
         self.device = device
         self.method = method
 
-        # BERT
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
-        self.text_encoder = BertModel.from_pretrained('bert-base-cased')
+        self.text_encoder = text_encoder
         for param in self.text_encoder.parameters():
             param.requires_grad = False
-        self.lin_text = nn.Linear(768, int(self.hidden_size))
+        self.lin_text = nn.Linear(self.text_encoder.out_dim, int(self.hidden_size))
         self.encoder_layer = nn.TransformerEncoderLayer(d_model=self.hidden_size, nhead=4, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=1)
 
@@ -109,13 +105,9 @@ class SkeletonFormer(nn.Module):
         # memory_mask: :math:`(T, S)`.
         batch_size, seq_length, _ = motions.shape
 
-        # Embedding del testo BERT
-        text_tokens = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True).to(self.device)
-        input_ids = text_tokens.input_ids
-        mask = text_tokens.attention_mask
-        last_hidden_state, text_embedding = self.text_encoder(input_ids=input_ids, attention_mask=mask,return_dict=False) # (bs, 768)
+        text_embedding = self.text_encoder(texts) 
+
         text_embedding = self.lin_text(text_embedding).unsqueeze(1).expand(batch_size, seq_length, self.hidden_size) # (bs, hideen_size/2)
-        #outputs = []
         
         text_embedding = self.transformer_encoder(self.PPE(text_embedding))
 
@@ -133,13 +125,8 @@ class SkeletonFormer(nn.Module):
         # memory_mask: :math:`(T, S)`.
         batch_size, seq_length, _ = motions.shape
         
-        outputs = []
-
-        # Embedding del testo BERT
-        text_tokens = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True).to(self.device)
-        input_ids = text_tokens.input_ids
-        mask = text_tokens.attention_mask
-        last_hidden_state, text_embedding = self.text_encoder(input_ids=input_ids, attention_mask=mask,return_dict=False) # (bs, 768)
+        text_embedding = self.text_encoder(texts)
+        
         text_embedding = self.lin_text(text_embedding).unsqueeze(1).expand(batch_size, seq_length, self.hidden_size) # (bs, hideen_size/2)
         outputs = []
 

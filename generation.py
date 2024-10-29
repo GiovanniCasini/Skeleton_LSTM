@@ -144,12 +144,12 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    name = "SkeletonFormer_LossRec_HumML_m1_bs512_h64_"
+    name = "SkeletonFormer_LossRec_HumML_m1_bs1_h128_"
 
     model_class = SkeletonFormer if "SkeletonFormer" in name else SkeletonLSTM
     model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
     dataset = "humanml3d" if "HumML" in name else "kitml"
-    test_id = "000015" if dataset=="humanml3d" else "00029"
+    test_id = "000000" if dataset=="humanml3d" else "00029"
     y_is_z_axis = True if dataset=="humanml3d" else False
     feature_size = 205 if dataset=="humanml3d" else 63 
 
