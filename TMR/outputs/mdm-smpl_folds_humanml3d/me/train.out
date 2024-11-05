@@ -1,0 +1,5 @@
+[24/08/24 12:47:19][__main__][INFO] - Training script
+[24/08/24 12:47:19][__main__][INFO] - The config can be found here: 
+outputs/mdm-smpl_folds_humanml3d/me/config.json
+[24/08/24 12:48:56][lightning_fabric.utilities.seed][INFO] - Global seed set to 1234
+[24/08/24 12:48:57][__main__][INFO] - Loading the dataloaders

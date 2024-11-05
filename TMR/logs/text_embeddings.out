@@ -1,0 +1,2 @@
+[10/05/24 11:16:22][__main__][INFO] - Compute token embeddings for distilbert-base-uncased
+[10/05/24 11:18:12][__main__][INFO] - Compute sentence embeddings for sentence-transformers/all-mpnet-base-v2
