@@ -111,18 +111,18 @@ if __name__ == '__main__':
     dataset_name = "humanml" # "kitml" or "humanml"
     model_class = SkeletonFormer # SkeletonFormer or SkeletonLSTM
     text_encoder = CLIP # Bert | Bart | CLIP
-    extra_text = ""
+    extra_text = "_4l"
 
     # Iperparametri
-    hidden_size = 64
+    hidden_size = 128
     num_epochs = 400
-    bs = 128
+    bs = 8
     lr = 0.0001
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
     method_name = "1" if method.value == "current_frame" else "2"
     dataset_sigla = "KitML" if dataset_name == "kitml" else "HumML"
-    name = f"{model_class.__name__}_Loss{criterion_name}_{dataset_sigla}_m{method_name}_bs{bs}_h{hidden_size}_{extra_text}_textEmb{text_encoder.__name__}"
+    name = f"{model_class.__name__}_Loss{criterion_name}_{dataset_sigla}_m{method_name}_bs{bs}_h{hidden_size}_textEmb{text_encoder.__name__}_{extra_text}"
     feature_size = 63 if dataset_name == "kitml" else 205
 
     print(f"name: {name}")

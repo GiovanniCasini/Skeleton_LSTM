@@ -259,4 +259,4 @@ if __name__ == "__main__":
     plt.ylabel('Frequenza')
     plt.title('Distribuzione delle lunghezze delle sequenze nel dataset')
     plt.grid(True)
-    plt.savefig('distribuzione_lunghezze_sequenze2.png')
+    plt.savefig('distribuzione_lunghezze_sequenze2.png') 

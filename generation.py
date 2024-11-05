@@ -153,13 +153,18 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    name = "SkeletonFormer_LossRec_HumML_m1_bs128_h64__textEmbCLIP"
+    name = "SkeletonFormer_LossRec_HumML_m1_bs8_h128_textEmbCLIP__4l"
+    ids = ["00003","00029","00069","00507","00003","00915","00971","01260","01321"]
+    #ids = ["000000","000004","000009","000013","000021","000015","000019","000032"]
 
-    model_class = SkeletonFormer if "SkeletonFormer" in name else SkeletonLSTM
-    model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
-    dataset = "humanml3d" if "HumML" in name else "kitml"
-    test_id = "000000" if dataset=="humanml3d" else "00029"
-    y_is_z_axis = True if dataset=="humanml3d" else False
-    feature_size = 205 if dataset=="humanml3d" else 63 
+    for id in ids:
+        
+        model_class = SkeletonFormer if "SkeletonFormer" in name else SkeletonLSTM
+        model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
+        dataset = "humanml3d" if "HumML" in name else "kitml"
+        test_id = id if dataset=="humanml3d" else id
+        y_is_z_axis = True if dataset=="humanml3d" else False
+        feature_size = 205 if dataset=="humanml3d" else 63 
 
-    generate(model_class=model_class, feature_size=feature_size, model_path=model_path, id=test_id, name=name, dataset=dataset, y_is_z_axis=y_is_z_axis)
+        generate(model_class=model_class, feature_size=feature_size, model_path=model_path, id=test_id, name=name, dataset=dataset, y_is_z_axis=y_is_z_axis)
+        

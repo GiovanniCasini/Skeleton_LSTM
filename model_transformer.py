@@ -77,7 +77,7 @@ class SkeletonFormer(nn.Module):
             param.requires_grad = False
         self.lin_text = nn.Linear(self.text_encoder.out_dim, int(self.hidden_size))
         self.encoder_layer = nn.TransformerEncoderLayer(d_model=self.hidden_size, nhead=4, batch_first=True)
-        self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=1)
+        self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=4)
 
         # motion encoder
         self.motion_encoder = nn.Linear(feature_size, self.hidden_size)
@@ -87,7 +87,7 @@ class SkeletonFormer(nn.Module):
         
         self.biased_mask = init_biased_mask(n_head = 4, max_seq_len = 2000, period=self.period)
         decoder_layer = nn.TransformerDecoderLayer(d_model=self.hidden_size, nhead=4, dim_feedforward=2*self.hidden_size, batch_first=True)        
-        self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=1)
+        self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=4)
 
         # motion decoder
         self.motion_decoder = nn.Linear(self.hidden_size, self.feature_size)

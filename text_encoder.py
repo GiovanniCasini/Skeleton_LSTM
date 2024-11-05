@@ -7,6 +7,7 @@ import torch
 from torch import Tensor
 from typing import Dict, List
 import torch.nn.functional as F
+import clip
 
 
 class Bert(nn.Module):
@@ -29,19 +30,21 @@ class Bert(nn.Module):
 
 class Bart(nn.Module):
     def __init__(self, device):
-        super(Bert, self).__init__()
-        self.tokenizer = BartTokenizer.from_pretrained('bert-base-cased')
-        self.text_encoder = BartModel.from_pretrained('bert-base-cased')
+        super(Bart, self).__init__()
+        self.tokenizer = BartTokenizer.from_pretrained("facebook/bart-large")
+        self.text_encoder = BartModel.from_pretrained("facebook/bart-large")
         self.device = device
-        self.out_dim = 768
+        self.out_dim = 1024
 
     @torch.no_grad()
     def forward(self, texts):
-         # Embedding del testo BART
         text_tokens = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True).to(self.device)
         input_ids = text_tokens.input_ids
         mask = text_tokens.attention_mask
-        last_hidden_state, text_embedding = self.text_encoder(input_ids=input_ids, attention_mask=mask,return_dict=False) # (bs, 768)
+        outputs = self.text_encoder(input_ids=input_ids, attention_mask=mask, return_dict=False)
+        last_hidden_state = outputs[0]  # (batch_size, seq_length_text, hidden_size)
+        # Use the first token's hidden state as the pooled embedding
+        text_embedding = last_hidden_state[:, 0, :] 
         return text_embedding
 
 
@@ -50,8 +53,6 @@ class CLIP(nn.Module):
         super().__init__()
         self.device = device
         self.out_dim = 512
-
-        import clip
 
         model, preprocess = clip.load(modelname, device)
         self.tokenizer = clip.tokenize
