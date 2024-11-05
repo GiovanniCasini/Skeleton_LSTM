@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from model_lstm import Method, SkeletonLSTM
 from tools.extract_joints import extract_joints
 from model_transformer import SkeletonFormer
+from text_encoder import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -22,7 +23,9 @@ def load_model(model_class, model_path, name, feature_size=63):
     checkpoint = torch.load(model_path, map_location=device)
     hidden_size = checkpoint["hidden_size"]
     method = Method("current_frame") if "_m1" in name else (Method("output") if "_m2" in name else 0)
-    model = model_class(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)  
+    text_encoder = CLIP if "CLIP" in name else (Bert if "Bert" in name else Bart) 
+    text_encoder = text_encoder(device=device)
+    model = model_class(text_encoder=text_encoder, hidden_size=hidden_size, feature_size=feature_size, name=name, method=method)  
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 
@@ -82,19 +85,19 @@ def normalize_output(output, dataset):
 
     return output
 
-def generate(model, motion, text, length, index, output_dir, name, dataset, y_is_z_axis=False):
+def generate(model, motion, text, length, index, output_dir, name, dataset,test_id, y_is_z_axis=False):
 
     output = generate_output(model, motion, text, length)
     output = normalize_output(output=output, dataset=dataset)
     
-    save_path = os.path.join(output_dir, f"output_{index}.npy")
+    save_path = os.path.join(output_dir, f"{test_id}.npy")
     
     np.save(save_path, output)
     print(f"Output salvato in: {save_path}")
 
 if __name__ == "__main__":
 
-    name = "SkeletonFormer_LossRec_HumML_m1_bs1_h64_"
+    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h256_textEmbCLIP__4l"
     model_class = SkeletonFormer if "SkeletonFormer" in name else SkeletonLSTM
     model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
     dataset = "humanml3d" if "HumML" in name else "kitml"
@@ -131,5 +134,5 @@ if __name__ == "__main__":
         motion, text, length = load_input(test_id, dataset=dataset)
 
         generate(model=model,motion=motion,text=text,length=length,index=index,output_dir=output_dir,
-            name=name,dataset=dataset,y_is_z_axis=y_is_z_axis)
+            name=name,dataset=dataset,y_is_z_axis=y_is_z_axis, test_id=test_id)
 
