@@ -177,7 +177,7 @@ def main():
     ### SETTINGS 
     input_types = [exp_gt, exp_text_kitml] 
     
-    DEBUG = 50 # to test the evaluation script, only the firsts #{DEBUG} eleemnts with {DEBUG}!=0 are considered
+    DEBUG = 0 # to test the evaluation script, only the firsts #{DEBUG} eleemnts with {DEBUG}!=0 are considered
     
     ###
     np.random.seed(0)

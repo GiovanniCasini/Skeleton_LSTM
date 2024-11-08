@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
     method_name = "1" if method.value == "current_frame" else "2"
-    dataset_sigla = "HumML" if dataset_name == "humanml" else ("KitML" if dataset_name == "kitml" else "KitMl2")
+    dataset_sigla = "HumML" if dataset_name == "humanml" else "KitML"
     feature_size = 63 if dataset_name == "kitml" else 205
     name = f"{model_class.__name__}_Loss{criterion_name}_{dataset_sigla}_m{method_name}_bs{bs}_h{hidden_size}_textEmb{text_encoder.__name__}_Data{data_format}_{extra_text}"
 

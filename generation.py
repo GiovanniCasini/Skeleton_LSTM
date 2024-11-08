@@ -150,23 +150,16 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
     pathlib.Path(save_dir).mkdir(parents=True, exist_ok=True) 
     save_path = f"{save_dir}/{id}.mp4"
 
-    if output.shape[-1] != 205:
-        testset_path = f"{os.getcwd()}/kit_numpy/test"
-        # np_data1 = np.load(f"{testset_path}/{id}_motion.npy")
-        numpy_to_video(output, save_path, connections=connections, text=text)
-
-    elif data_format=="Smpl":
-
-        if y_is_z_axis:
-            x, mz, my = T(joints)
-            joints = T(np.stack((x, my, mz), axis=0))
-
-        numpy_to_video(joints, save_path, connections=connections, body_connections="guoh3djoints", text=text) 
-
+    if y_is_z_axis:
+        x, mz, my = T(output)
+        output = T(np.stack((x, my, mz), axis=0))
+    
+    body_connections = "guoh3djoints" if data_format=="Smpl" else "kitml"
+    numpy_to_video(output, save_path, connections=connections, body_connections=body_connections, text=text)
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h256_textEmbCLIP_DataSmpl__4l"
+    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h256_textEmbCLIP_DataJoints__4l"
     ids = ["00003","00029","00069","00507","00003","00915","00971","01260","01321"]
     #ids = ["000000","000004","000009","000013","000021","000015","000019","000032"]
 
