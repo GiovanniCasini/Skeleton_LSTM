@@ -108,22 +108,23 @@ if __name__ == '__main__':
 
     criterion = rec_loss
     method = Method("current_frame")
-    dataset_name = "humanml" # "kitml" or "humanml"
+    dataset_name = "kitml" # "kitml" or "humanml"
     model_class = SkeletonFormer # SkeletonFormer or SkeletonLSTM
     text_encoder = CLIP # Bert | Bart | CLIP
     extra_text = "_4l"
+    data_format = "Smpl" # "Joints" | "Smpl"
 
     # Iperparametri
-    hidden_size = 128
+    hidden_size = 256
     num_epochs = 400
-    bs = 8
+    bs = 1
     lr = 0.0001
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
     method_name = "1" if method.value == "current_frame" else "2"
-    dataset_sigla = "KitML" if dataset_name == "kitml" else "HumML"
-    name = f"{model_class.__name__}_Loss{criterion_name}_{dataset_sigla}_m{method_name}_bs{bs}_h{hidden_size}_textEmb{text_encoder.__name__}_{extra_text}"
+    dataset_sigla = "HumML" if dataset_name == "humanml" else ("KitML" if dataset_name == "kitml" else "KitMl2")
     feature_size = 63 if dataset_name == "kitml" else 205
+    name = f"{model_class.__name__}_Loss{criterion_name}_{dataset_sigla}_m{method_name}_bs{bs}_h{hidden_size}_textEmb{text_encoder.__name__}_Data{data_format}_{extra_text}"
 
     print(f"name: {name}")
 
@@ -138,26 +139,30 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=lr)
     print(f"Num parameters: {count_parameters(model)}")
 
-    if dataset_name == "kitml":
-        # Parser degli argomenti
-        parser = argparse.ArgumentParser(description="Load data for motion, text, and length")
-        parser.add_argument('--path_train', type=str, default=f"{os.getcwd()}/kit_numpy/train", help='Path to the training data')
-        parser.add_argument('--path_val', type=str, default=f"{os.getcwd()}/kit_numpy/validation", help='Path to the validation data')
-        parser.add_argument('--path_test', type=str, default=f"{os.getcwd()}/kit_numpy/test", help='Path to the test data')
-        parser.add_argument('--info', type=str, default="", help='Experiment info')
-        args = parser.parse_args()
+    if data_format == "Joints":
+        if dataset_name == "kitml":
+            # Parser degli argomenti
+            parser = argparse.ArgumentParser(description="Load data for motion, text, and length")
+            parser.add_argument('--path_train', type=str, default=f"{os.getcwd()}/kit_numpy/train", help='Path to the training data')
+            parser.add_argument('--path_val', type=str, default=f"{os.getcwd()}/kit_numpy/validation", help='Path to the validation data')
+            parser.add_argument('--path_test', type=str, default=f"{os.getcwd()}/kit_numpy/test", help='Path to the test data')
+            parser.add_argument('--info', type=str, default="", help='Experiment info')
+            args = parser.parse_args()
 
-        # Caricamento dei dati
-        dataset = get_dataloaders(args, bs=bs)
-        train_loader = dataset["train"]
-        valid_loader = dataset["valid"]
-        test_loader = dataset["test"]
-    elif dataset_name == "humanml":
+            # Caricamento dei dati
+            dataset = get_dataloaders(args, bs=bs)
+            train_loader = dataset["train"]
+            valid_loader = dataset["valid"]
+            test_loader = dataset["test"]
+        else:
+            raise NotImplementedError("HumanML3D with joints data not implemented")
+
+    elif data_format == "Smpl":
         motion_loader = AMASSMotionLoader(fps=20, base_dir="/andromeda/personal/lmandelli/stmc/datasets/motions/AMASS_20.0_fps_nh_smplrifke")
-        train_dataset = TextMultiMotionDataset(name="humanml3d", text_encoder=None, motion_loader=motion_loader, split="train")
-        val_dataset = TextMultiMotionDataset(name="humanml3d", text_encoder=None, motion_loader=motion_loader, split="val")
+        train_dataset = TextMultiMotionDataset(name=dataset_name, text_encoder=None, motion_loader=motion_loader, split="train")
+        val_dataset = TextMultiMotionDataset(name=dataset_name, text_encoder=None, motion_loader=motion_loader, split="val")
 
         train_loader = data.DataLoader(dataset=train_dataset, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=train_dataset.collate_fn)
         valid_loader = data.DataLoader(dataset=val_dataset, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=train_dataset.collate_fn)
-
+        
     train(model, train_loader, valid_loader, criterion, optimizer, num_epochs)

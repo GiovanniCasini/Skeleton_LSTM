@@ -15,7 +15,7 @@ from .common.quaternion import (
     quaternion_to_cont6d,
 )
 
-from .paramUtil import t2m_raw_offsets, t2m_kinematic_chain
+from .paramUtil import t2m_raw_offsets, t2m_kinematic_chain, kit_kinematic_chain, kit_raw_offsets
 
 import torch
 
@@ -344,6 +344,8 @@ def _get_joints_to_guofeats():
     # Get offsets of target skeleton
     example_data = torch.from_numpy(np.load(skeleton_path))
 
+    new_format = True # MYCODE
+
     # Lower legs
     l_idx1, l_idx2 = 5, 8
     # Right/Left foot
@@ -351,10 +353,10 @@ def _get_joints_to_guofeats():
     # Face direction, r_hip, l_hip, sdr_r, sdr_l
     face_joint_indx = [2, 1, 17, 16]
     # l_hip, r_hip
-    joints_num = 22
+    joints_num = 22 if new_format else 21
 
-    n_raw_offsets = torch.from_numpy(t2m_raw_offsets)
-    kinematic_chain = t2m_kinematic_chain
+    n_raw_offsets = torch.from_numpy(t2m_raw_offsets) if new_format else torch.from_numpy(kit_raw_offsets)
+    kinematic_chain = t2m_kinematic_chain if new_format else kit_kinematic_chain
 
     tgt_skel = Skeleton(n_raw_offsets, kinematic_chain, "cpu")
     # (joints_num, 3)

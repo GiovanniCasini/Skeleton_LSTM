@@ -1,4 +1,3 @@
-import src.prepare  # noqa
 
 from TMR.mtt.metrics import calculate_activation_statistics_normalized
 from TMR.mtt.load_tmr_model import load_tmr_model_easy
@@ -22,73 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.animation as animation
 
-
-def numpy_to_video(np_data, save_path):
-    # np_data: numpy array of predictions body movements
-    # save_path: where the mp4 video will be saved
-    num_frames = np_data.shape[0]
-    num_joints = np_data.shape[1]
-
-    body_connections = [(0,3), (3,6), (6,9), (12, 15), (23,21), (14, 17), (17, 19), (21,19), (13, 16), (16,18), (18,20) ,(0,2), (2,5), (5,8), (8,11), (0,1), (1,4), (4,7), (7,10)]
-
-    # Crea una figura e un asse 3D
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    # Set camera height
-    ax.view_init(elev=10.)
-
-    min_x, max_x = min(np_data[:,:,0].flatten()), max(np_data[:,:,0].flatten())
-    min_y, max_y = min(np_data[:,:,1].flatten()), max(np_data[:,:,1].flatten())
-    min_z, max_z = min(np_data[:,:,2].flatten()), max(np_data[:,:,2].flatten())
-
-    # Inizializzazione della funzione di trama 
-    def init():
-        pass
-
-    # Funzione di animazione, qui devi mettere il codice per aggiornare il tuo tracciato
-    def update(num_frame):
-        ax.cla()  # pulisce l'attuale ax
-        ax.set_xlim(min_x, max_x)
-        ax.set_ylim(min_y, max_y)
-        ax.set_zlim(min_z, max_z)
-        # print(f"Frame {num_frame} - x[0]: {data[num_frame,0,0]}")
-        ax.scatter(np_data[num_frame,:,0], np_data[num_frame,:,1], np_data[num_frame,:,2], marker="x")
-
-        for c1, c2 in body_connections:
-            plt.plot([np_data[num_frame,c1,0], np_data[num_frame,c2,0]], [np_data[num_frame,c1,1], np_data[num_frame,c2,1]], [np_data[num_frame,c1,2], np_data[num_frame,c2,2]])
-        
-        for i in range(num_joints):
-            ax.text(np_data[num_frame,i,0], np_data[num_frame,i,1], np_data[num_frame,i,2], str(i))
-
-    # Crea l'animazione utilizzando le funzioni di inizializzazione e aggiornamento
-    ani = animation.FuncAnimation(fig, update, frames=range(num_frames), init_func=init, blit=False)
-
-    ax.set_xlabel("x axis")
-    ax.set_ylabel("y axis")
-    ax.set_zlabel("z axis")
-
-    plt.show()
-
-    # Salva l'animazione come file mp4, bisogna avere ffmepg installato
-    ani.save(save_path, writer='ffmpeg')
-
-
-def plot_points(x, y, z):
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    ax.scatter(x,y,zs = z, s=20)
-    count = 0
-    for xi, yi, zi in zip(x, y, z):
-        text = str(count)
-        ax.text(xi, yi, zi, text, zdir=(1, 1, 1))
-        count += 1
-
-    ax.set_xlabel("x axis")
-    ax.set_ylabel("y axis")
-    ax.set_zlabel("z axis")
-
-    plt.savefig(f"{os.getcwd()}/plot.png", dpi=150)
+from generation import load_input
 
 
 def print_result(result):
@@ -216,180 +149,71 @@ def get_metrics(
     return metrics
 
 
-def load_test_texts_motions(path_ids, path_all_texts, path_annotations, DEBUG=0, fps=20):
-    test_texts, motions = [], []
-    id_to_text_path = {}
-
-    # Load test ids
-    with open(path_ids) as f:
-        lines = f.readlines()
-    
-    if DEBUG != 0:
-        lines = lines[:DEBUG] 
-    
-    for l in lines:
-        id = l.strip() 
-        id_to_text_path[id] = {
-            "text": None,
-            "motion_path": None,
-            "motion": None
-        }
-    # Load test texts
-    with open(path_all_texts) as f:
-        lines_t = f.readlines()
-    for l in lines_t:
-        idx = l.split("-")[0].strip()
-        text = l.split("-")[1].strip()
-        if idx in id_to_text_path.keys(): # il  test set non ha tutti i testi
-            assert id_to_text_path[idx]["text"] is None
-            id_to_text_path[idx]["text"] = text    
-    # Load motion paths
-    with open(path_annotations, "rb") as ff:
-        annotations = orjson.loads(ff.read())
-    for idx in id_to_text_path.keys():
-        path = annotations[idx]["path"]
-        id_to_text_path[idx]["motion_path"] = path
-    # remove humanact12
-    id_to_text_path = {k: v for k, v in id_to_text_path.items() if "humanact12" not in v["motion_path"]}# Giusto o sbagliato?
-    # Load motions
-    for idx in id_to_text_path.keys():
-        amass_path = id_to_text_path[idx]["motion_path"]
-        path = os.path.join(amass_folder, amass_path + ".npy")
-        motion = np.load(path)
-        # Croppo i movimenti maggiori di 10 secondi prendendo gli estremi specificati nel file annotations
-        start_frame = int(annotations[idx]["annotations"][0]["start"] * fps)
-        end_frame = int(annotations[idx]["annotations"][0]["end"] * fps)
-        motion = motion[start_frame:end_frame]
-
-        x, y, z = motion.T
-        joint = np.stack((x, z, -y), axis=0).T
-        feats = joints_to_guofeats(joint)
-        id_to_text_path[idx]["motion"] = feats
-
-    test_texts = [id_to_text_path[i]["text"] for i in id_to_text_path.keys()]
-    motions = [id_to_text_path[i]["motion"] for i in id_to_text_path.keys()]
-    
-    return test_texts, motions, id_to_text_path
-
-
-amass_folder = "/andromeda/personal/lmandelli/stmc/datasets/motions/AMASS_20.0_fps_nh_smpljoints_neutral_nobetas"
-base_path_splitme_humanml3d = f"{os.getcwd()}/pretrained_models/mdm-smpl_splitme_humanml3d"
-base_path_splitme_kitml = f"{os.getcwd()}/pretrained_models/mdm-smpl_splitme_kitml"
-base_path_humanml_clip = f"{os.getcwd()}/pretrained_models/mdm-smpl_clip_smplrifke_humanml3d"
-base_path_kitml_clip = f"{os.getcwd()}/pretrained_models/mdm-smpl_clip_smplrifke_kitml"
-
 def main():    
+
+    base_smpldataset_path = "/andromeda/personal/lmandelli/stmc/datasets"
+    model_name = "SkeletonFormer_LossRec_KitMl_m1_bs1_h256_textEmbCLIP_DataSmpl__4l"
+    amass_folder = f"{base_smpldataset_path}/motions/AMASS_20.0_fps_nh_smpljoints_neutral_nobetas"
+    data_format = "Smpl" if "Smpl" in model_name else "Joints"
+    feature_size = 63 if data_format=="Joints" else 205
+    dataset = "humanml3d" if "HumML" in model_name else "kitml"
+
+
+    kit_joints_folder = f"{os.getcwd()}/kit_numpy/"
+    generations_folder = f"{os.getcwd()}/outputs/{model_name}/"
+
+    path_annotations = f"{base_smpldataset_path}/annotations/{dataset}/annotations.json"
+    annotations = json.load(open(path_annotations))
+
     exp_gt = {
             "name": "gt",
-            "generations_folder": f"{amass_folder}/"
-    }
-    exp_text_humanml = {
-            "name": "text",
-            "path_ids":f"{os.getcwd()}/datasets/annotations/humanml3d/splits/complex/test.txt",
-            "generations_folder": f"{base_path_splitme_humanml3d}/generations_text/", 
-            "path_annotations": f"{os.getcwd()}/datasets/annotations/humanml3d/splits/complex/annotations_test.json"
-    }
-    exp_submotions_humanml = {
-            "name": "submotions mcd",
-            "path_ids":f"{os.getcwd()}/datasets/annotations/humanml3d/splits/complex/test.txt",
-            "generations_folder": f"{base_path_splitme_humanml3d}/generations_submotions/",
-            "path_annotations": f"{os.getcwd()}/datasets/annotations/humanml3d/splits/complex/annotations_test.json"
-    }
-    exp_stmc_humanml ={
-            "name": "submotions stmc",
-            "path_ids":f"{os.getcwd()}/datasets/annotations/humanml3d/splits/complex/test.txt",
-            "generations_folder":f"{base_path_splitme_humanml3d}/generations_submotions_stmc/", 
-            "path_annotations": f"{os.getcwd()}/datasets/annotations/humanml3d/splits/complex/annotations_test.json"
-    }
-    exp_multitext_text_humanml ={
-            "name":"multi_text",
-            "path_ids":f"{os.getcwd()}/datasets/annotations/humanml3d/splits/test.txt", 
-            "generations_folder":  f"{base_path_humanml_clip}/generations_multitext_text/",
-            "path_annotations": f"{os.getcwd()}/datasets/annotations/humanml3d/annotations.json"
-    }
-    exp_multitext_submotions_humanml = {
-            "name": "multi_t",
-            "path_ids":f"{os.getcwd()}/datasets/annotations/humanml3d/splits/test.txt", 
-            "generations_folder": f"{base_path_humanml_clip}/generations_multitext_submotions/",
-            "path_annotations": f"{os.getcwd()}/datasets/annotations/humanml3d/annotations.json"
+            "generations_folder": f"{kit_joints_folder}/" if (data_format=="Joints" and dataset=="kitml") else amass_folder
     }
     exp_text_kitml = {
-            "name": "text",
-            "path_ids":f"{os.getcwd()}/datasets/annotations/kitml/splits/complex/test.txt",
-            "generations_folder": f"{base_path_splitme_kitml}/generations_text/", 
-            "path_annotations": f"{os.getcwd()}/datasets/annotations/kitml/splits/complex/annotations_test.json"
-    }
-    exp_submotions_kitml = {
-            "name": "submotions",
-            "path_ids":f"{os.getcwd()}/datasets/annotations/kitml/splits/complex/test.txt",
-            "generations_folder": f"{base_path_splitme_kitml}/generations_submotions/",
-            "path_annotations": f"{os.getcwd()}/datasets/annotations/kitml/splits/complex/annotations_test.json"
-    }
-    exp_stmc_kitml ={
-            "name": "submotions_stmc",
-            "path_ids":f"{os.getcwd()}/datasets/annotations/kitml/splits/complex/test.txt",
-            "generations_folder":f"{base_path_splitme_kitml}/generations_submotions_stmc/", 
-            "path_annotations": f"{os.getcwd()}/datasets/annotations/kitml/splits/complex/annotations_test.json"
-    }
-    exp_multitext_text_kitml ={
-            "name":"multi_text_k",
-            "path_ids":f"{os.getcwd()}/datasets/annotations/kitml/splits/test.txt", 
-            "generations_folder":  f"{base_path_kitml_clip}/generations_multitext_text/",
-            "path_annotations": f"{os.getcwd()}/datasets/annotations/kitml/annotations.json"
-    }
-    exp_multitext_kitml_submotions = {
-            "name": "multi_k_t",
-            "path_ids":f"{os.getcwd()}/datasets/annotations/kitml/splits/test.txt", 
-            "generations_folder": f"{base_path_kitml_clip}/generations_multitext_submotions/",
-            "path_annotations": f"{os.getcwd()}/datasets/annotations/kitml/annotations.json"
+            "name": "kitml",
+            "generations_folder": f"{generations_folder}/", 
     }
     
     ### SETTINGS 
-    input_types = [exp_gt, exp_text_humanml, exp_stmc_humanml, exp_submotions_humanml] 
+    input_types = [exp_gt, exp_text_kitml] 
     
-    DEBUG = 0 # to test the evaluation script, only the firsts #{DEBUG} eleemnts with {DEBUG}!=0 are considered
+    DEBUG = 50 # to test the evaluation script, only the firsts #{DEBUG} eleemnts with {DEBUG}!=0 are considered
     
     ###
     np.random.seed(0)
     device = "cpu"
     fps = 20.0
-    path_ids = input_types[1]["path_ids"]
-    assert all([inp["path_ids"]==path_ids for inp in input_types[1:]])
-    path_annotations = input_types[1]["path_annotations"]
-    assert all([inp["path_annotations"]==path_annotations for inp in input_types[1:]])
-    dataset = "humanml3d" if "humanml3d" in input_types[1]["path_ids"] else "kitml"
-    
-    result = []
-    
+        
     names = [i["name"] for i in input_types]
-    print(f"\nExperiment on {names} and with debug [{DEBUG}] of the split [{path_ids}]\n")
-    
-    with open(path_ids) as f:
-        ids_gt = f.readlines()
-        ids_gt = [i.strip() for i in ids_gt]
-    
-    annotations = json.load(open(path_annotations))
-    ids_gt = [i for i in ids_gt if  "humanact12" not in annotations[i]["path"]]
-    # filter annotations
-    annotations = {k: v for k, v in annotations.items() if "humanact12" not in v["path"]} 
-    
+    result = []
+
+    if data_format=="Joints" and dataset=="kitml":
+        testset_path = f"{os.getcwd()}/kit_numpy/test/"
+        test_files = [f for f in os.listdir(testset_path) if f.endswith('_motion.npy')]
+        ids_gt = [f.split('_')[0] for f in test_files]
+    elif data_format=="Smpl":
+        path_ids = f"{base_smpldataset_path}/annotations/{dataset}/splits/test.txt"
+        with open(path_ids) as f:
+            ids_gt = f.readlines()
+            ids_gt = [i.strip() for i in ids_gt]
+    else:
+        raise NotImplementedError()
+
     if DEBUG != 0:
         ids_gt = ids_gt[:DEBUG]
     
+    print(f"\nExperiment on {names} and with debug [{DEBUG}] of the split [{ids_gt}]\n")
+
     texts_gt, motions_guofeats_gt = [], []
     for idx in ids_gt:
-        value = annotations[idx]
-        # prendo il testo della prima annotazione testuale
-        texts_gt.append(value["annotations"][-1]["text"])
-        
-        motion_path = exp_gt["generations_folder"] + value["path"]+".npy"
-        motion = np.load(motion_path) # [num_frames, 24, 3], con 0 < num_frames   
-        start_frame = int(value["annotations"][0]["start"] * fps)
-        end_frame = int(value["annotations"][0]["end"] * fps)
-        motion = motion[start_frame:end_frame] 
-        
-        x, y, z = motion.T
-        joint = np.stack((x, z, -y), axis=0).T # [num_frames, 24, 3]
+
+        motion, text, length = load_input(idx, dataset=dataset, data_format=data_format, AMASS_path=f"{base_smpldataset_path}/motions/AMASS_20.0_fps_nh_smpljoints_neutral_nobetas/")
+        texts_gt.append(text)
+        if data_format=="Smpl":
+            x, y, z = motion.T
+            joint = np.stack((x, z, -y), axis=0).T
+        else:
+            joint = motion[0].view(motion.shape[1], 21, 3).numpy()
         feats = joints_to_guofeats(joint) # [num_frames, 263]
         motions_guofeats_gt.append(feats)
     
@@ -416,7 +240,7 @@ def main():
         motions_guofeats = []
         for idx in ids_gt:
             if experiment["name"] == "gt":
-                motion_path = experiment["generations_folder"] + annotations[idx]["path"]+".npy"
+                motion_path = os.path.join(experiment["generations_folder"],annotations[idx]["path"]+".npy")
                 motion = np.load(motion_path) # [num_frames, 24, 3], with 0 < num_frames   
                 start_frame = int(annotations[idx]["annotations"][0]["start"] * fps)
                 end_frame = int(annotations[idx]["annotations"][0]["end"] * fps)
