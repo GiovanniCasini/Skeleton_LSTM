@@ -26,3 +26,5 @@ deps/*
 visualizations/*
 .vscode/*
 outputs/*
+renderer/__pycache__/*
+renderer/humor_render_tools/__pycache__/*

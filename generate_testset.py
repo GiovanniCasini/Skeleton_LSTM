@@ -44,10 +44,10 @@ def generate_output(model, motion, text, length):
     return output
 
 
-def generate(model, motion, text, length, index, output_dir, name, dataset, test_id, y_is_z_axis=False, data_format="Joints"):
+def generate(model, motion, text, length, index, output_dir, name, dataset, test_id, y_is_z_axis=False, data_format="Joints", out_format="Joints"):
 
     output = generate_output(model, motion, text, length)
-    output = normalize_output(output=output, data_format=data_format) # [num frames, num joints, 3]
+    output = normalize_output(output=output, data_format=data_format, out_format=out_format) # [num frames, num joints, 3]
     
     save_path = os.path.join(output_dir, f"{test_id}.npy")
     
@@ -56,13 +56,17 @@ def generate(model, motion, text, length, index, output_dir, name, dataset, test
 
 if __name__ == "__main__":
 
-    name = "SkeletonFormer_LossRec_KitMl_m1_bs1_h256_textEmbCLIP_DataSmpl__4l"
+    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h256_textEmbCLIP_DataSmpl__4l"
     model_class = SkeletonFormer if "SkeletonFormer" in name else SkeletonLSTM
     model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
     dataset = "humanml3d" if "HumML" in name else "kitml"
     data_format = "Smpl" if "Smpl" in name else "Joints"
     y_is_z_axis = True if data_format=="Smpl" else False
     feature_size = 63 if data_format=="Joints" else 205
+    # Specifica se salvare in file (nframes, 6890, 3) o (nframes, 205) o (nframes, 24,3)
+    # Joints serve per fare l'evaluate
+    # Vertices per fare il render con Smpl
+    out_format = "Vertices" # "Vertices", "Smpl", "Joints"
 
     model = load_model(model_class=model_class, model_path=model_path, name=name, feature_size=feature_size)
     model.to(device)
@@ -86,7 +90,7 @@ if __name__ == "__main__":
                 continue
         test_ids = tmp
 
-    output_dir = os.path.join(os.getcwd(), "outputs", name)
+    output_dir = os.path.join(os.getcwd(), "outputs", name, out_format)
     os.makedirs(output_dir, exist_ok=True)
 
     for index, test_id in enumerate(test_ids):
@@ -94,6 +98,15 @@ if __name__ == "__main__":
 
         motion, text, length = load_input(test_id, dataset=dataset, data_format=data_format)
 
-        generate(model=model,motion=motion,text=text,length=length,index=index,output_dir=output_dir,
-            name=name,dataset=dataset,y_is_z_axis=y_is_z_axis, test_id=test_id, data_format=data_format)
-
+        generate(model=model,
+                 motion=motion,
+                 text=text,
+                 length=length,
+                 index=index,
+                 output_dir=output_dir,            
+                 name=name,
+                 dataset=dataset,
+                 y_is_z_axis=y_is_z_axis, 
+                 test_id=test_id, 
+                 data_format=data_format,
+                 out_format=out_format)

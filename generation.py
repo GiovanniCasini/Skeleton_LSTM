@@ -96,7 +96,14 @@ def save_output(output, id):
     output_file = f"{id}.npy"
     np.save(output_file, output.cpu().numpy())  # Salva come numpy array
 
-def normalize_output(output, data_format="Joints"):
+def normalize_output(output, data_format="Joints", out_format="Joints"):
+    """
+    Normalizza l'output in base al formato di input e output
+    Args:
+        output: torch.Tensor
+        data_format: str |
+        out_format: str | Specify output format "Joints" (num_frames, 24, 3), "Smpl" (num_frames, 205), "Vertices" (num_frames, 6890, 3)
+    """
 
     if data_format=="Joints":
         #maxx, minn = 6675.25, -6442.60
@@ -118,7 +125,7 @@ def normalize_output(output, data_format="Joints"):
             input_pose_rep="axisangle",
             gender="male",
         )
-        output_ = extract_joints(
+        extracted_output = extract_joints(
                 output.cpu(),
                 #motion[0].cpu(),
                 "smplrifke",
@@ -126,15 +133,20 @@ def normalize_output(output, data_format="Joints"):
                 value_from="smpl",
                 smpl_layer=smplh,
         )
-        joints = output_["joints"]     # (num frames, 24, 3)
-        vertices = output_["vertices"] # (num frames, 6890, 3)
-        smpldata = output_["smpldata"] # (num frames, 6890, 3)
-        output = joints
+        joints = extracted_output["joints"]     # (num frames, 24, 3)
+        vertices = extracted_output["vertices"] # (num frames, 6890, 3)
+        smpldata = extracted_output["smpldata"] # (num frames, 6890, 3)
+        if out_format == "Joints":
+            output = joints
+        elif out_format == "Vertices":
+            output = vertices
+        elif out_format == "Smpl":
+            output = output
 
     return output 
 
 
-def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_axis=False, connections=True, data_format="Joints"):
+def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_axis=False, connections=True, data_format="Joints", out_format="Joints"):
 
     model = load_model(model_class=model_class, model_path=model_path, name=name, feature_size=feature_size)
     model.to(device)
@@ -144,7 +156,7 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
     # Genera il movimento (output)
     output = generate_output(model, motion, text, length)
 
-    output = normalize_output(output=output, data_format=data_format) #
+    output = normalize_output(output=output, data_format=data_format, out_format=out_format) #
     
     save_dir = f"{os.getcwd()}/visualizations/{name}/"
     pathlib.Path(save_dir).mkdir(parents=True, exist_ok=True) 
@@ -159,9 +171,9 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h256_textEmbCLIP_DataJoints__4l"
+    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h256_textEmbCLIP_DataSmpl__4l"
     ids = ["00003","00029","00069","00507","00003","00915","00971","01260","01321"]
-    #ids = ["000000","000004","000009","000013","000021","000015","000019","000032"]
+    # ids = ["000000","000004","000009","000013","000021","000015","000019","000032"]
 
     for id in ids:
         
@@ -169,7 +181,14 @@ if __name__ == "__main__":
         model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
         dataset = "humanml3d" if "HumML" in name else "kitml"
         data_format = "Smpl" if "Smpl" in name else "Joints"
-        y_is_z_axis = True if data_format=="Smpl" else False
+        y_is_z_axis = True if (data_format=="Smpl") else False
         feature_size = 63 if data_format=="Joints" else 205
 
-        generate(model_class=model_class, feature_size=feature_size, model_path=model_path, id=id, name=name, dataset=dataset, y_is_z_axis=y_is_z_axis, data_format=data_format)     
+        generate(model_class=model_class, 
+                feature_size=feature_size, 
+                model_path=model_path, id=id, 
+                name=name, 
+                dataset=dataset, 
+                y_is_z_axis=y_is_z_axis, 
+                data_format=data_format, 
+        )     
