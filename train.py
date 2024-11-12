@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
     criterion = rec_loss
     method = Method("current_frame")
-    dataset_name = "kitml" # "kitml" or "humanml"
+    dataset_name = "kitml" # "kitml" or "humanml3d"
     model_class = SkeletonFormer # SkeletonFormer or SkeletonLSTM
     text_encoder = CLIP # Bert | Bart | CLIP
     extra_text = "_4l"
@@ -116,13 +116,13 @@ if __name__ == '__main__':
 
     # Iperparametri
     hidden_size = 256
-    num_epochs = 400
+    num_epochs = 500
     bs = 1
     lr = 0.0001
 
     criterion_name = "Vel" if criterion == velocity_loss else "Rec"
     method_name = "1" if method.value == "current_frame" else "2"
-    dataset_sigla = "HumML" if dataset_name == "humanml" else "KitML"
+    dataset_sigla = "HumML" if dataset_name == "humanml3d" else "KitML"
     feature_size = 63 if dataset_name == "kitml" else 205
     name = f"{model_class.__name__}_Loss{criterion_name}_{dataset_sigla}_m{method_name}_bs{bs}_h{hidden_size}_textEmb{text_encoder.__name__}_Data{data_format}_{extra_text}"
 
