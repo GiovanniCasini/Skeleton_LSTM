@@ -177,7 +177,7 @@ def main():
     ### SETTINGS 
     input_types = [exp_gt, exp_text_kitml] 
     
-    DEBUG = 0 # to test the evaluation script, only the firsts #{DEBUG} eleemnts with {DEBUG}!=0 are considered
+    DEBUG = 100 # to test the evaluation script, only the firsts #{DEBUG} eleemnts with {DEBUG}!=0 are considered
     
     ###
     np.random.seed(0)
@@ -252,81 +252,81 @@ def main():
                 if motion.shape[0] > 200:
                     motion = motion[:200]
         
-                x, y, z = motion.T
-                joint = np.stack((x, z, -y), axis=0).T # [num_frames, 24, 3]
-                feats = joints_to_guofeats(joint) # [num_frames, 263]
-                motions_guofeats.append(feats)
+            x, y, z = motion.T
+            joint = np.stack((x, z, -y), axis=0).T # [num_frames, 24, 3]
+            feats = joints_to_guofeats(joint) # [num_frames, 263]
+            motions_guofeats.append(feats)
         
-    motion_latents = tmr_forward(motions_guofeats)  # tensor(N, 256)
-    sim_matrix_m2t = get_sim_matrix(motion_latents, text_latents_gt).numpy()
-    sim_matrix_m2m = get_sim_matrix(motion_latents, motion_latents_gt).numpy()
-    
-    # motion-to-text retrieval metrics
-    m2t_top_1_lst = []
-    m2t_top_3_lst = []
-    m2t_top_10_lst = []
-    # TMR motion-to-motion (M2M) score
-    m2t_score_lst = []
-    m2m_score_lst = []
-    
-    for idx in range(len(sim_matrix_m2t)):
-    
-        # score between 0 and 1
-        m2t_score_lst.append((sim_matrix_m2t[idx, idx] + 1) / 2)
-        m2m_score_lst.append((sim_matrix_m2m[idx, idx] + 1) / 2)
+        motion_latents = tmr_forward(motions_guofeats)  # tensor(N, 256)
+        sim_matrix_m2t = get_sim_matrix(motion_latents, text_latents_gt).numpy()
+        sim_matrix_m2m = get_sim_matrix(motion_latents, motion_latents_gt).numpy()
         
-        asort = np.argsort(sim_matrix_m2t[idx])[::-1]
-        m2t_top_1_lst.append(1 * (idx in asort[:1]))
-        m2t_top_3_lst.append(1 * (idx in asort[:3]))
-        m2t_top_10_lst.append(1 * (idx in asort[:10]))
-
-        dic_m2t[ids_gt[idx]] = (sim_matrix_m2t[idx, idx] + 1) / 2
-        dic_m2m[ids_gt[idx]] = (sim_matrix_m2m[idx, idx] + 1) / 2
-
-    m2t_top_1 = np.mean(m2t_top_1_lst)
-    m2t_top_3 = np.mean(m2t_top_3_lst)
-    m2t_top_10 = np.mean(m2t_top_10_lst)
-    m2t_score = np.mean(m2t_score_lst)
-    m2m_score = np.mean(m2m_score_lst)
-    
-    # Transition distance:
-    trans_dist_lst = []
-    for motion_guofeats in motions_guofeats:
-        # for the text baseline for example
-        N = len(motion_guofeats)
-        inter_points = np.array([N // 4, 2 * N // 4, 3 * N // 4]) # tre frames 
-
-        gt_motion_guofeats = torch.from_numpy(motion_guofeats) # (n_frames, 263)
-        gt_joints_local = guofeats_to_joints_local(gt_motion_guofeats)
+        # motion-to-text retrieval metrics
+        m2t_top_1_lst = []
+        m2t_top_3_lst = []
+        m2t_top_10_lst = []
+        # TMR motion-to-motion (M2M) score
+        m2t_score_lst = []
+        m2m_score_lst = []
         
-        gt_joints_local = gt_joints_local - gt_joints_local[:, [0]] # (n_frames, 22, 3) 
+        for idx in range(len(sim_matrix_m2t)):
+        
+            # score between 0 and 1
+            m2t_score_lst.append((sim_matrix_m2t[idx, idx] + 1) / 2)
+            m2m_score_lst.append((sim_matrix_m2m[idx, idx] + 1) / 2)
+            
+            asort = np.argsort(sim_matrix_m2t[idx])[::-1]
+            m2t_top_1_lst.append(1 * (idx in asort[:1]))
+            m2t_top_3_lst.append(1 * (idx in asort[:3]))
+            m2t_top_10_lst.append(1 * (idx in asort[:10]))
 
-        # Same distance as in TEACH
-        trans_dist_lst.append(
-        torch.linalg.norm(
-                (gt_joints_local[inter_points] - gt_joints_local[inter_points - 1]), 
-                dim=-1,
+            dic_m2t[ids_gt[idx]] = (sim_matrix_m2t[idx, idx] + 1) / 2
+            dic_m2m[ids_gt[idx]] = (sim_matrix_m2m[idx, idx] + 1) / 2
+
+        m2t_top_1 = np.mean(m2t_top_1_lst)
+        m2t_top_3 = np.mean(m2t_top_3_lst)
+        m2t_top_10 = np.mean(m2t_top_10_lst)
+        m2t_score = np.mean(m2t_score_lst)
+        m2m_score = np.mean(m2m_score_lst)
+        
+        # Transition distance:
+        trans_dist_lst = []
+        for motion_guofeats in motions_guofeats:
+            # for the text baseline for example
+            N = len(motion_guofeats)
+            inter_points = np.array([N // 4, 2 * N // 4, 3 * N // 4]) # tre frames 
+
+            gt_motion_guofeats = torch.from_numpy(motion_guofeats) # (n_frames, 263)
+            gt_joints_local = guofeats_to_joints_local(gt_motion_guofeats)
+            
+            gt_joints_local = gt_joints_local - gt_joints_local[:, [0]] # (n_frames, 22, 3) 
+
+            # Same distance as in TEACH
+            trans_dist_lst.append(
+            torch.linalg.norm(
+                    (gt_joints_local[inter_points] - gt_joints_local[inter_points - 1]), 
+                    dim=-1,
+            )
+            .mean(-1)
+            .flatten()
+            )
+        
+        # Transition distance
+        transition = torch.concatenate(trans_dist_lst).mean().numpy().item()
+        # diversity = calculate_diversity(motion_latents, diversity_times) 
+        
+        mu, cov = calculate_activation_statistics_normalized(motion_latents.numpy())
+        
+        # FID+ metrics
+        fid = calculate_frechet_distance(
+                gt_mu.astype(float),
+                gt_cov.astype(float),
+                mu.astype(float),
+                cov.astype(float),
         )
-        .mean(-1)
-        .flatten()
-        )
-    
-    # Transition distance
-    transition = torch.concatenate(trans_dist_lst).mean().numpy().item()
-    # diversity = calculate_diversity(motion_latents, diversity_times) 
-    
-    mu, cov = calculate_activation_statistics_normalized(motion_latents.numpy())
-    
-    # FID+ metrics
-    fid = calculate_frechet_distance(
-            gt_mu.astype(float),
-            gt_cov.astype(float),
-            mu.astype(float),
-            cov.astype(float),
-    )
-    
-    result.append( [experiment["name"], m2t_top_1*100, m2t_top_3*100, m2t_top_10*100, m2t_score, m2m_score, fid, transition*100 ] )
-    print_result(result[-1])
+        
+        result.append( [experiment["name"], m2t_top_1*100, m2t_top_3*100, m2t_top_10*100, m2t_score, m2m_score, fid, transition*100 ] )
+        print_result(result[-1])
     
     
 if __name__ == "__main__":
