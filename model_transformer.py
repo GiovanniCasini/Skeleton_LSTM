@@ -126,6 +126,8 @@ class SkeletonFormer(nn.Module):
         # tgt_mask: :math:`(T, T)`.
         # memory_mask: :math:`(T, S)`.
         batch_size, _, _ = motions.shape
+
+        motions = torch.tensor(np.stack([np.load(f"{os.getcwd()}/saves/first_frame.npy"), np.load(f"{os.getcwd()}/saves/second_frame.npy")])[None]).to(device)
         
         text_embedding = self.text_encoder(texts)
         

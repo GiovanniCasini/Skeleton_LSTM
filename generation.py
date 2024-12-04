@@ -175,10 +175,10 @@ def generate(count, model_class, feature_size, model_path, id, name, dataset, y_
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h512_textEmbCLIP_DataSmpl__4l"
+    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h256_textEmbCLIP_DataSmpl__4l"
     # test
     ids = ["00447"]
-    #ids = ["00447","00448","00507","00922","01963","03937","03932","01260","01381","01408","01409","00001","00158","00166","00322","00440","00694","00003","00904"] # walking
+    ids = ["00447","00448","00507","00922","01963","03937","03932","01260","01381","01408","01409","00001","00158","00166","00322","00440","00694","00003","00904"] # walking
     #ids = ["01319","01321","01322","01329","03424","03618","03787","03802"] # jumping
     #ids = ["01260","01381","01408","01409"] # throwing waving
     #ids = ["00447","00448","00507","00922","01963","03937","03932"] # running
