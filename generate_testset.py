@@ -39,7 +39,7 @@ def load_model(model_class, model_path, name, feature_size=63):
 def generate_output(model, motion, text, length):
     # Genera l'output dal modello
     with torch.no_grad():
-        output = model.predict(motion, text)
+        output = model.predict(motion, text, length)
         # output = model(motion, text)
     return output
 
@@ -56,7 +56,7 @@ def generate(model, motion, text, length, index, output_dir, name, dataset, test
 
 if __name__ == "__main__":
 
-    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h256_textEmbCLIP_DataSmpl__4l"
+    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h256_textEmbCLIP_DataSmpl_4l_long"
     model_class = SkeletonFormer if "SkeletonFormer" in name else SkeletonLSTM
     model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
     dataset = "humanml3d" if "HumML" in name else "kitml"
@@ -70,6 +70,7 @@ if __name__ == "__main__":
 
     model = load_model(model_class=model_class, model_path=model_path, name=name, feature_size=feature_size)
     model.to(device)
+    print(device)
 
     if data_format == "Joints":
         if dataset == "kitml":

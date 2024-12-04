@@ -123,7 +123,7 @@ def get_metrics(
             m2t_top_3_lst.append(1 * (text_number in asort_m2t[:3]))
 
     motion_latents = torch.concatenate(fid_realism_crop_motion_latents_lst)
-    mu, cov = calculate_activation_statistics_normalized(motion_latents.numpy())
+    mu, cov = calculate_activation_statistics_normalized(motion_latents.cpu().numpy())
 
     # FID+ metrics
     metrics["fid"] = calculate_frechet_distance(
@@ -152,7 +152,7 @@ def get_metrics(
 def main():    
 
     base_smpldataset_path = "/andromeda/personal/lmandelli/stmc/datasets"
-    model_name = "SkeletonFormer_LossRec_KitMl_m1_bs1_h256_textEmbCLIP_DataSmpl__4l"
+    model_name = "SkeletonFormer_LossRec_HumML_m1_bs1_h256_textEmbCLIP_DataSmpl_4l_long"
     amass_folder = f"{base_smpldataset_path}/motions/AMASS_20.0_fps_nh_smpljoints_neutral_nobetas"
     data_format = "Smpl" if "Smpl" in model_name else "Joints"
     feature_size = 63 if data_format=="Joints" else 205
@@ -160,7 +160,7 @@ def main():
 
 
     kit_joints_folder = f"{os.getcwd()}/kit_numpy/"
-    generations_folder = f"{os.getcwd()}/outputs/{model_name}/"
+    generations_folder = f"{os.getcwd()}/outputs/{model_name}/Joints"
 
     path_annotations = f"{base_smpldataset_path}/annotations/{dataset}/annotations.json"
     annotations = json.load(open(path_annotations))
@@ -206,14 +206,17 @@ def main():
 
     texts_gt, motions_guofeats_gt = [], []
     for idx in ids_gt:
+        try:
+            motion, text, length = load_input(idx, dataset=dataset, data_format=data_format, AMASS_path=f"{base_smpldataset_path}/motions/AMASS_20.0_fps_nh_smpljoints_neutral_nobetas/")
+        except:
+            continue
 
-        motion, text, length = load_input(idx, dataset=dataset, data_format=data_format, AMASS_path=f"{base_smpldataset_path}/motions/AMASS_20.0_fps_nh_smpljoints_neutral_nobetas/")
         texts_gt.append(text)
         if data_format=="Smpl":
             x, y, z = motion.T
             joint = np.stack((x, z, -y), axis=0).T
         else:
-            joint = motion[0].view(motion.shape[1], 21, 3).numpy()
+            joint = motion[0].view(motion.shape[1], 21, 3).cpu().numpy()
         feats = joints_to_guofeats(joint) # [num_frames, 263]
         motions_guofeats_gt.append(feats)
     
@@ -239,6 +242,8 @@ def main():
         # Load the motions
         motions_guofeats = []
         for idx in ids_gt:
+            if "humanact12" in annotations[idx]["path"]:
+                continue
             if experiment["name"] == "gt":
                 motion_path = os.path.join(experiment["generations_folder"],annotations[idx]["path"]+".npy")
                 motion = np.load(motion_path) # [num_frames, 24, 3], with 0 < num_frames   

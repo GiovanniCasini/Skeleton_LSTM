@@ -41,7 +41,7 @@ def load_input(idx, dataset="kitml", target_length=100, data_format="Joints", AM
 
     if data_format == "Joints":
         if dataset == "kitml":
-            testset_path = f"{os.getcwd()}/kit_numpy/test"
+            testset_path = f"{os.getcwd()}/kit_numpy/validation"
             motion = torch.from_numpy(np.load(f"{testset_path}/{idx}_motion.npy")).reshape(-1, 63)
             #maxx, minn = 6675.25, -6442.60
             std, mean = 790.71, 357.44
@@ -68,6 +68,10 @@ def load_input(idx, dataset="kitml", target_length=100, data_format="Joints", AM
         text = annotations[idx]["annotations"][0]["text"]
         length_s = annotations[idx]["annotations"][0]["end"] - annotations[idx]["annotations"][0]["start"]
         length = int(fps * float(length_s))
+        #fake_length = 200
+        #print(f"real length {length}, fake length {fake_length}")
+        #length = fake_length
+
         path = annotations[idx]["path"]
         
         if "humanact12" in path:
@@ -86,7 +90,7 @@ def load_input(idx, dataset="kitml", target_length=100, data_format="Joints", AM
 def generate_output(model, motion, text, length):
     # Genera l'output dal modello
     with torch.no_grad():
-        output = model.predict(motion, text)
+        output = model.predict(motion, text, length)
         #output = model(motion, text)
     return output
 
@@ -146,7 +150,7 @@ def normalize_output(output, data_format="Joints", out_format="Joints"):
     return output 
 
 
-def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_axis=False, connections=True, data_format="Joints", out_format="Joints"):
+def generate(count, model_class, feature_size, model_path, id, name, dataset, y_is_z_axis=False, connections=True, data_format="Joints", out_format="Joints"):
 
     model = load_model(model_class=model_class, model_path=model_path, name=name, feature_size=feature_size)
     model.to(device)
@@ -160,7 +164,7 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
     
     save_dir = f"{os.getcwd()}/visualizations/{name}/"
     pathlib.Path(save_dir).mkdir(parents=True, exist_ok=True) 
-    save_path = f"{save_dir}/{id}.mp4"
+    save_path = f"{save_dir}/{id}_{count}.mp4"
 
     if y_is_z_axis:
         x, mz, my = T(output)
@@ -171,12 +175,24 @@ def generate(model_class, feature_size, model_path, id, name, dataset, y_is_z_ax
 
 if __name__ == "__main__":
     # Specifica il percorso del modello salvato e l'id dell'elemento di test
-    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h256_textEmbCLIP_DataSmpl__4l"
-    ids = ["00003","00029","00069","00507","00003","00915","00971","01260","01321"]
-    # ids = ["000000","000004","000009","000013","000021","000015","000019","000032"]
+    name = "SkeletonFormer_LossRec_KitML_m1_bs1_h512_textEmbCLIP_DataSmpl__4l"
+    # test
+    ids = ["00447"]
+    #ids = ["00447","00448","00507","00922","01963","03937","03932","01260","01381","01408","01409","00001","00158","00166","00322","00440","00694","00003","00904"] # walking
+    #ids = ["01319","01321","01322","01329","03424","03618","03787","03802"] # jumping
+    #ids = ["01260","01381","01408","01409"] # throwing waving
+    #ids = ["00447","00448","00507","00922","01963","03937","03932"] # running
+    #ids = ["000000","000004","000009","000013","000021","000015","000019","000032"]
 
+    # validation
+    #ids = ["01361","01367"]
+    #ids = ["00107","00159","00215","00294","00318","00321","00428","00432"] # walking
+    #ids = ["01323","03279","03781","03784","03797"] # jumping
+    #ids = ["01253","01255","01259","01261","00658","02813","01412","01403","01405"] # throwing waving
+    #ids = ["00508","00555","00779","02487"] # running
+    count = 0
     for id in ids:
-        
+        count += 1
         model_class = SkeletonFormer if "SkeletonFormer" in name else SkeletonLSTM
         model_path = f"{os.getcwd()}/checkpoints/{name}.ckpt"
         dataset = "humanml3d" if "HumML" in name else "kitml"
@@ -184,7 +200,7 @@ if __name__ == "__main__":
         y_is_z_axis = True if (data_format=="Smpl") else False
         feature_size = 63 if data_format=="Joints" else 205
 
-        generate(model_class=model_class, 
+        generate(count, model_class=model_class, 
                 feature_size=feature_size, 
                 model_path=model_path, id=id, 
                 name=name, 
