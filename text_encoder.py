@@ -1,4 +1,3 @@
-from turtle import forward
 from transformers import BertTokenizer, BertModel
 from transformers import BartTokenizer, BartModel
 import torch.nn as nn

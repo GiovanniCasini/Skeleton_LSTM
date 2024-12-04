@@ -31,7 +31,7 @@ def numpy_to_video(np_data, save_path, connections=True, body_connections="kitml
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     # Set camera height
-    ax.view_init(elev=10.)
+    ax.view_init(elev=10., azim=30)
 
     min_x, max_x = min(np_data[:,:,0].flatten()), max(np_data[:,:,0].flatten())
     min_y, max_y = min(np_data[:,:,1].flatten()), max(np_data[:,:,1].flatten())

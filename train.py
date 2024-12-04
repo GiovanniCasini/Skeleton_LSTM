@@ -13,12 +13,13 @@ from torch.utils import data
 from model_transformer import *
 import wandb
 from text_encoder import *
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Funzione di training
-def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
+def train(model, train_loader, valid_loader, criterion, optimizer, scheduler, num_epochs):
     valid_loss = 100
     for e in range(num_epochs):
         model.train()
@@ -75,6 +76,7 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
                     wandb.log({"val_loss": running_loss/(batch_id+1), "epoch": e+1})
 
                 avg_loss = running_loss/(batch_id+1)
+                scheduler.step(avg_loss)
                 if avg_loss < valid_loss:
                     valid_loss = avg_loss
                     save_checkpoint(model, optimizer, num_epochs, model.save_path)
@@ -121,7 +123,7 @@ if __name__ == '__main__':
     data_format = "Smpl" # "Joints" | "Smpl"
 
     # Iperparametri
-    hidden_size = 256
+    hidden_size = 1024
     num_epochs = 500
     bs = 1
     lr = 0.0001
@@ -143,7 +145,7 @@ if __name__ == '__main__':
     model = model_class(hidden_size=hidden_size, feature_size=feature_size, name=name, method=method, text_encoder=text_encoder)
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    print(f"Num parameters: {count_parameters(model)}")
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10)
 
     if data_format == "Joints":
         if dataset_name == "kitml":
@@ -171,4 +173,4 @@ if __name__ == '__main__':
         train_loader = data.DataLoader(dataset=train_dataset, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=train_dataset.collate_fn)
         valid_loader = data.DataLoader(dataset=val_dataset, batch_size=bs, shuffle=True, num_workers=8, pin_memory=True, collate_fn=train_dataset.collate_fn)
         
-    train(model, train_loader, valid_loader, criterion, optimizer, num_epochs)
+    train(model, train_loader, valid_loader, criterion, optimizer, scheduler, num_epochs)

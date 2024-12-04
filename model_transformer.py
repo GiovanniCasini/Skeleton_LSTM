@@ -103,27 +103,29 @@ class SkeletonFormer(nn.Module):
     def forward(self, motions, texts):
         # tgt_mask: :math:`(T, T)`.
         # memory_mask: :math:`(T, S)`.
-        batch_size, seq_length, _ = motions.shape
+        batch_size, seq_length, _ = motions.shape #[1, seq_len, 205]
 
-        text_embedding = self.text_encoder(texts) 
+        text_embedding = self.text_encoder(texts) #[1, 512]
 
-        text_embedding = self.lin_text(text_embedding).unsqueeze(1).expand(batch_size, seq_length, self.hidden_size) # (bs, hideen_size/2)
-        
-        text_embedding = self.transformer_encoder(self.PPE(text_embedding))
+        text_embedding = self.lin_text(text_embedding).unsqueeze(1).expand(batch_size, seq_length, self.hidden_size)
+                            #[1, hiddensize]       [1, 1, hiddensize]       [1, seq_len, hiddensize]   
+        text_embedding = self.transformer_encoder(self.PPE(text_embedding)) #[1, seq_len, hiddensize]
 
-        motions_emb = self.PPE(self.motion_encoder(motions))
+        motions_emb = self.PPE(self.motion_encoder(motions)) #[1, seq_len, hiddensize]
         
         tgt_mask = self.biased_mask[:, :motions.shape[1], :motions.shape[1]].clone().detach().to(device=self.device).unsqueeze(0).expand(batch_size, 4, seq_length, seq_length).reshape(batch_size*4, seq_length, seq_length) 
-        memory_mask = enc_dec_mask(self.device, motions.shape[1], text_embedding.shape[1])
+            #[4, seq_len, seq_len]
+        memory_mask = enc_dec_mask(self.device, motions.shape[1], text_embedding.shape[1]) #[seq_len, seq_len]
         motion_out = self.transformer_decoder(motions_emb, text_embedding, tgt_mask=tgt_mask, memory_mask=memory_mask)
-        outputs = self.motion_decoder(motion_out)# + motions[:, 0, :].unsqueeze(1)
+            #[1, seq_len, hiddensize] 
+        outputs = self.motion_decoder(motion_out) #[1, seq_len, 205]
             
         return outputs
     
-    def predict(self, motions, texts):
+    def predict(self, motions, texts, seq_length):
         # tgt_mask: :math:`(T, T)`.
         # memory_mask: :math:`(T, S)`.
-        batch_size, seq_length, _ = motions.shape
+        batch_size, _, _ = motions.shape
         
         text_embedding = self.text_encoder(texts)
         
@@ -133,22 +135,24 @@ class SkeletonFormer(nn.Module):
         text_embedding = self.transformer_encoder(self.PPE(text_embedding))
         
         motion_frame_disp = motions[:, 1, :] - motions[:, 0, :]# primo frame (bs, 63)
-        motion_frame = motions[:, 0, :] # primo frame (bs, 63)
+        motion_frame = motions[:, 1, :] # primo frame (bs, 63)
         
-        for i in range(seq_length):
+        for i in range(seq_length - 2):
             if i==0:
                 motion_emb = self.motion_encoder(motion_frame_disp).unsqueeze(1)
                 motion_input = self.PPE(motion_emb)
+                outputs.append(motions[:, 0, None, :])
+                outputs.append(motions[:, 1, None, :])
             else:
                 motion_input = self.PPE(motion_emb)
             tgt_mask = self.biased_mask[:, :motion_input.shape[1], :motion_input.shape[1]].clone().detach().to(device=self.device)
             memory_mask = enc_dec_mask(self.device, motion_input.shape[1], text_embedding.shape[1])
             motion_out = self.transformer_decoder(motion_input, text_embedding, tgt_mask=tgt_mask, memory_mask=memory_mask)
-            motion_out = self.motion_decoder(motion_out) #+ motion_frame_
+            motion_out = self.motion_decoder(motion_out)
             motion_disp = motion_out[:,-1,:].unsqueeze(1)
             motion_frame = motion_disp + motion_frame
             outputs.append(motion_frame)
-            new_output = self.motion_encoder(motion_disp)#.unsqueeze(1)
+            new_output = self.motion_encoder(motion_disp)
             motion_emb = torch.cat((motion_emb, new_output), 1)
 
         outputs = torch.stack(outputs, dim=1).squeeze(2)
