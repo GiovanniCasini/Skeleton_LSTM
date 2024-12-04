@@ -1,3 +1,4 @@
+import numpy
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -32,7 +33,12 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs):
             
             motions = motions[:, 1:, :] - motions[:, :-1, :]
 
-            outputs = model(motions, texts)
+            if model_class == SkeletonSuperFormer:
+                t = torch.tensor(np.arange(2, motions.shape[1]+2)).to(device)
+                outputs = model(motions, texts, t)
+            else:
+                outputs = model(motions, texts)
+
             loss = criterion(outputs[:, :-1, :], motions[:, 1:, :])
             #loss = criterion(outputs, motions)
             loss.backward()
@@ -109,7 +115,7 @@ if __name__ == '__main__':
     criterion = rec_loss
     method = Method("current_frame")
     dataset_name = "kitml" # "kitml" or "humanml3d"
-    model_class = SkeletonFormer # SkeletonFormer or SkeletonLSTM
+    model_class = SkeletonSuperFormer # SkeletonFormer or SkeletonLSTM
     text_encoder = CLIP # Bert | Bart | CLIP
     extra_text = "_4l"
     data_format = "Smpl" # "Joints" | "Smpl"

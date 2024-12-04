@@ -1,13 +1,12 @@
 import json
 import numpy as np
-from sympy import im
-import torch
 import os
-from tools.smpl_layer import SMPLH
+import time
+
+import torch
 import torch.nn.functional as F
 
 from model_lstm import Method, SkeletonLSTM
-from tools.extract_joints import extract_joints
 from model_transformer import SkeletonFormer
 from text_encoder import *
 
@@ -35,11 +34,18 @@ def load_model(model_class, model_path, name, feature_size=63):
 
     return model
 
+times = {}
 
 def generate_output(model, motion, text, length):
     # Genera l'output dal modello
     with torch.no_grad():
+        start = time.time()
         output = model.predict(motion, text)
+        duration = time.time() - start
+        if motion.shape[1] not in times:
+            times[motion.shape[1]] = []
+        times[motion.shape[1]].append(duration)
+        print(f"Tempo di esecuzione: {duration} per {motion.shape[1]} frames")
         # output = model(motion, text)
     return output
 
@@ -51,7 +57,7 @@ def generate(model, motion, text, length, index, output_dir, name, dataset, test
     
     save_path = os.path.join(output_dir, f"{test_id}.npy")
     
-    np.save(save_path, output)
+    # np.save(save_path, output)
     print(f"Output salvato in: {save_path}")
 
 if __name__ == "__main__":
@@ -110,3 +116,8 @@ if __name__ == "__main__":
                  test_id=test_id, 
                  data_format=data_format,
                  out_format=out_format)
+        
+    with open(f"{os.getcwd()}/times.json", "w") as outfile: 
+        json.dump(times, outfile)
+    mean_time = np.mean([np.mean(times[l]) for l in times.keys()])
+    print(f"Tempo medio per frame: {mean_time}")
